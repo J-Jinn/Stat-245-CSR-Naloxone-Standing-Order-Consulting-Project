@@ -1,15 +1,14 @@
 ---
 title: 'Project Proposal - CSR Naloxone'
-author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua
-  Ridder, Joseph Jinn)'
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
   pdf_document:
-    fig_height: 4
-    fig_width: 6.5
+    fig_height: 8
+    fig_width: 13
   html_document:
-    fig_height: 4
-    fig_width: 6.5
+    fig_height: 8
+    fig_width: 13
     df_print: paged
 classoption: portrait
 ---
@@ -18,6 +17,8 @@ classoption: portrait
 knitr::opts_chunk$set(echo = TRUE)
 require(ggformula)
 require(mosaic)
+require(fastR2)
+require(tidyverse)
 require(s245)
 ```
 
@@ -60,7 +61,7 @@ Project Description:
 
 >The standing order evaluation is part of the larger MODA (Michigan overdose data to action) initiative to combat the opioid epidemic. The US is currently considered to be in the third wave of the opioid epidemic (read more about the opioid epidemic at https://www.cdc.gov/drugoverdose/epidemic/index.html).
 
->So far, we have conducted interviews and focus groups with key people from a variety of fields who have experience with the standing order, opioid use disorder, recovery, harm reduction, etc. Through these interviews and focus groups, we have identified several key outcomes or goals the standing order should be accomplishing."
+>So far, we have conducted interviews and focus groups with key people from a variety of fields who have experience with the standing order, opioid use disorder, recovery, harm reduction, etc. Through these interviews and focus groups, we have identified several key outcomes or goals the standing order should be accomplishing." 
 
 Cited from: Documentation provided by Keila Pieters.
 
@@ -193,7 +194,9 @@ Ideally, not all of your context resources will be web sites - consider whether 
 
 The idea is to reveiw these materials in the first weeks of your project to get familiar with the topic and understand what other data analysts are doing with similar data, not to do a full literature review or write anything up. One idea is to have different group members review different resources, and present/discuss them together at an early group meeting.
 
-**TO BE DETERMINED.**
+**WORK IN PROGRESS.**
+* Medline PLus video (offers explanation of how Naloxone saves lives)
++ https://www.youtube.com/watch?v=cssRZEI9ujY&feature=youtu.be
 
 * CDC Website:
 + https://wonder.cdc.gov/wonder/help/faq.html
@@ -209,15 +212,31 @@ What skills and strengths do your group members bring to the project that are li
 
 **Nana Ama Baidoo**
 
->Insert skills here.
+* Tableau
+* Excel
+* Python (very basic)
+* R (basic)
+* Microsoft Office applications
+* Organization
+* Open-minded & Understanding
 
 **Alex Visser**
 
->Insert skills here.
+* Excel
+* Python
+* Organization
+* Communication
+* R (Basic)
+* Time management
+* Creativity
 
 **Joshua Ridder**
 
->Insert skills here.
+* Python/C++/C#
+* R (basic)
+* Excel/Word/Powerpoint
+* GitHub
+* Discord/Slack/Teams
 
 **Joseph Jinn**
 

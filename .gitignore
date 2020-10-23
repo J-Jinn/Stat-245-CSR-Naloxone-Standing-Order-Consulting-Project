@@ -39,3 +39,5 @@ vignettes/*.pdf
 .Renviron
 Stat_245_CSR.Rproj
 project-proposal.log
+other_documents/
+datasets/

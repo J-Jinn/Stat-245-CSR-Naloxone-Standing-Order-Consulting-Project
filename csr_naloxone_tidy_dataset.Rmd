@@ -1,0 +1,205 @@
+---
+title: "CSR Naloxone Standing Order Project - Data Cleaning, Wrangling, and Exporation (eventually)"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+  html_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+```
+
+**Note: Could consider using Git via the integrated feature available.**
+
+[GitHub Respository - Joseph Jinn:](https://github.com/J-Jinn/Stat-245-CSR-Naloxone-Standing-Order-Consulting-Project)
+
+*Will not include datasets, binary, and other files in the repository, probably just the .Rmd documents*
+
+Useful Links:
+
+[CDC Wonder Export Help](https://wonder.cdc.gov/wonder/help/DataExport.html#Excel)
+[CDC Wonder Data Queries](https://wonder.cdc.gov/controller/datarequest/D76;jsessionid=62BD01B584C76ED54EBBEEA00C43)
+
+[Other Data](https://www.cdc.gov/nchs/nvss/vsrr/drug-overdose-data.htm)
+[Other Data](https://www.cdc.gov/drugoverdose/data/statedeaths/drug-overdose-death-2018.html)
+
+___
+___
+
+#### Another dataset to compare agains for our results with CDC Wonder aggregated data statistics.
+```{r}
+vssr <- read_csv("datasets\\VSRR_Provisional_Drug_Overdose_Death_Counts.csv")
+```
+
+```{r}
+glimpse(vssr)
+```
+
+```{r}
+summary(vssr)
+```
+
+```{r}
+head(vssr, 5)
+```
+
+___
+___
+
+#### Test that we can import CDC Wonder query files that have been converted to CSV manually.
+
+**TODO: Learn how to import flat text files into R, parse them into a dataframe, and export back out as a CSV.**
+Note: I know enough to do this in Python, but not R yet.  Will need to loook into the tutorials on the course website.
+
+```{r}
+agg1 <- read_csv("datasets\\Underlying_Cause_of_Death_1999-2018.csv")
+```
+
+```{r}
+glimpse(agg1)
+```
+
+```{r}
+head(agg1)
+```
+
+___
+
+```{r}
+agg2 <- read_csv("datasets\\Underlying_Cause_of_Death_1999-2018_2.csv")
+```
+
+```{r}
+glimpse(agg2)
+```
+
+```{r}
+head(agg2)
+```
+
+Looks like there's not initial issues with importing the CSV's we created from flat text file from the CDC Wonder data queries.
+
+___
+___
+
+#### EDA
+
+**Note: The goal of our service-learning project is to look through as many different combinations of aggregate statistics as possible to identify relevant trends and patterns.  As such, there's no one "fixed" dataset we are working with, just experimentation with many different aggregate queries.**
+
+```{r}
+gf_point(Deaths ~ Population, data = agg1)
+```
+
+```{r}
+agg1_modified <- agg1 %>% mutate(YearFactor = factor(agg1$Year), Urbanization2013Factor = factor(agg1$`2013 Urbanization`))
+```
+
+```{r}
+glimpse(agg1_modified)
+```
+
+```{r}
+agg1_modified_noNAs <- drop_na(agg1_modified)
+```
+
+```{r}
+gf_boxplot(Deaths ~ YearFactor, data = agg1_modified_noNAs) #+ coord_flip()
+```
+
+```{r}
+gf_boxplot(Deaths ~ Urbanization2013Factor, data = agg1_modified_noNAs) + coord_flip()
+```
+
+___
+
+```{r}
+glimpse(agg2)
+```
+
+```{r}
+gf_point(Deaths ~ Population, data = agg2)
+```
+
+```{r}
+agg2_modified <- agg2 %>% mutate(CountyFactor = factor(agg2$County), 
+                                 CauseOfDeathFactor = factor(agg2$`Cause of death`),
+                                 DrugAlcoholInducedCauseFactor = factor(agg2$`Drug/Alcohol Induced Cause`))
+```
+
+```{r}
+glimpse(agg2_modified)
+```
+
+```{r}
+agg1_modified_noNAs <- drop_na(agg1_modified)
+```
+
+```{r}
+gf_point(Deaths ~ Population | DrugAlcoholInducedCauseFactor, data = agg2_modified)
+```
+
+```{r}
+unique(agg2_modified$County)
+```
+
+```{r}
+unique(agg2_modified$CauseOfDeathFactor)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
