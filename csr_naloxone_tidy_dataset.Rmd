@@ -21,6 +21,11 @@ require(fastR2)
 require(s245)
 require(pander)
 require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr) # SQL syntax ftw.
+require(reticulate)
 
 # Some customization.  You can alter or delete as desired (if you know what you are doing).
 
@@ -37,7 +42,9 @@ knitr::opts_chunk$set(
 Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
 
 ```{r}
-# sessionInfo()
+sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+remotes::install_github('ProjectMOSAIC/ggformula')
 ```
 
 **Note: Could consider using Git via the integrated feature available.**
@@ -49,17 +56,58 @@ Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to instal
 Useful Links:
 
 [CDC Wonder Export Help](https://wonder.cdc.gov/wonder/help/DataExport.html#Excel)
-[CDC Wonder Data Queries](https://wonder.cdc.gov/controller/datarequest/D76;jsessionid=62BD01B584C76ED54EBBEEA00C43)
+[CDC Wonder Data Queries](https://wonder.cdc.gov/ucd-icd10.html)
 
 [Other Data](https://www.cdc.gov/nchs/nvss/vsrr/drug-overdose-data.htm)
 [Other Data](https://www.cdc.gov/drugoverdose/data/statedeaths/drug-overdose-death-2018.html)
+
+___
+
+## Logists for EDA:
+
+We should probably have some kind of naming procedures for the CSV files we create from the flat text files exported from our queries on the CDC Wonder Data site.
+
+Currently, my naming convention has become:
+
+CDC_GROUPBY_Group1_Group2_GroupN_2012_2018_ADDITIONAL_IDENTIFIERS_HERE.csv
+
+(i.e. CDC_GROUPBY_County_Race_2012_2018_DrugAlcoholCauses.csv)
+
+where Group1, Group2,...,GroupN, represents the variables we are grouping by.
+
+I'm basically specifying the structure of my query according to the different sections on the query "request form" page so that I can later identify how I created the query.  Of course, the file-name could become prohibitively long but I prefer to be able to keep track of all the different files we will accumulate rather than have generic names that don't identify at all what their contents are, which could make for difficulties further on.
+
+In addition, I am using my browser to print-to-pdf the entire "request form" tab so that I knowk exactly how to reproduce the query for a specific dataset file if it becomes necessary.
+
+Currently, the naming convention for the PDF print-outs of the queries is:
+
+Underlying Cause of Death, 1999-2018 Request Form for INSERT_NAME_OF_CSV_FILE_HERE.csv.PDF
+
+(i.e. Underlying Cause of Death, 1999-2018 Request Form for CDC_GROUPBY_County_Race_2012_2018_DrugAlcoholCauses.csv)
+
+So, it's basically the same static header at the beginning with the word 'for' and a copy/paste of the name of the CSV file attached with .csv and file extension .pdf.
+
+*Eventually, we'll also probably want to break up this .Rmd into individual discrete files according to some criteria or another rather than have one super-long meta file.*
+
+**Note: We should avoid calculating totals for columns when querying.  That is easy enough to do in R if we need column totals.  Thus, don't check the "show totals" options at the bottom of the "request form" tab.**
+
+Other considerations:
+
+* Set to 5 or less digits of precision in section 7 - other options.
+* For "measures" in section 1, I am currently including all the "for crude rates" checkboxes, along with "age adjusted rate" and "percent of total deaths".  Could be useful.
+* Convert "char" types to "factor" types if it makes sense to do so (categorical variable).
+* Re-level the levels in a categorical variable if a certain order makes sense.
+* Re-name variables that have spaces, start with numbers, etc., as they are a pain to work with.
+* etc.
+
+**Note: Could consider using the 'reticulate' package to interface between R/Pyton and run code chunks in R-Studio for both languages.  Leverage the strengths of both languages.  This could be useful as I know I can write a flat text file parser in Python for our queries.**
 
 ___
 ___
 
 #### Another dataset to compare agains for our results with CDC Wonder aggregated data statistics.
 ```{r}
-vssr <- read_csv("datasets\\VSRR_Provisional_Drug_Overdose_Death_Counts.csv")
+vssr <- read_csv("datasets///VSRR_Provisional_Drug_Overdose_Death_Counts.csv")
 ```
 
 ```{r}
@@ -74,6 +122,9 @@ summary(vssr)
 head(vssr, 5)
 ```
 
+This dataset should be pretty much cleaned and ready for analysis as it was a direct download from a link provided on one of the sites listed above.
+
+
 ___
 ___
 
@@ -82,8 +133,14 @@ ___
 **TODO: Learn how to import flat text files into R, parse them into a dataframe, and export back out as a CSV.**
 Note: I know enough to do this in Python, but not R yet.  Will need to loook into the tutorials on the course website.
 
+At some point, we may want to look into how to construct a function/script that knows how to automate the parsing and construction of a dataset from the flat text files that we can download from our queries on the CDC Wonder Data site.
+
+It is kind of annoying to manually do this one at a time by hand using Microsoft Excel by importing the flat text file.  Thus, recommend going this route if it doesn't prove prohibitively time-consuming.  We could also ask our project partner(s) if they already have such a script on hand as they have already been working with this data.  Albeit, they don't necessarily use R or Python so that could be a bust.
+
+___
+
 ```{r}
-agg1 <- read_csv("datasets\\Underlying_Cause_of_Death_1999-2018.csv")
+agg1 <- read_csv("datasets//Underlying_Cause_of_Death_1999-2018.csv")
 ```
 
 ```{r}
@@ -97,7 +154,7 @@ head(agg1)
 ___
 
 ```{r}
-agg2 <- read_csv("datasets\\Underlying_Cause_of_Death_1999-2018_2.csv")
+agg2 <- read_csv("datasets//Underlying_Cause_of_Death_1999-2018_2.csv")
 ```
 
 ```{r}
@@ -113,7 +170,7 @@ Looks like there's not initial issues with importing the CSV's we created from f
 ___
 ___
 
-#### EDA
+#### Initial rough EDA to get a feel for the data.
 
 **Note: The goal of our service-learning project is to look through as many different combinations of aggregate statistics as possible to identify relevant trends and patterns.  As such, there's no one "fixed" dataset we are working with, just experimentation with many different aggregate queries.**
 
@@ -170,28 +227,120 @@ gf_point(Deaths ~ Population | DrugAlcoholInducedCauseFactor, data = agg2_modifi
 ```
 
 ```{r}
-unique(agg2_modified$County)
+# unique(agg2_modified$County)
 ```
 
 ```{r}
-unique(agg2_modified$CauseOfDeathFactor)
+# unique(agg2_modified$CauseOfDeathFactor)
 ```
 
+___
+___
 
+#### Some more initial rough EDA.
 
+```{r}
+agg3 <- read_csv("datasets//joseph_jinn_queries//CDC_GROUPBY_County_Gender_2012_2018_DrugAlcoholCauses.csv")
+```
 
+```{r}
+glimpse(agg3)
+```
 
+```{r}
+head(agg3)
+```
+___
 
+```{r}
+agg4 <- read_csv("datasets//joseph_jinn_queries//CDC_GROUPBY_County_Race_2012_2018_DrugAlcoholCauses.csv")
+```
 
+```{r}
+glimpse(agg4)
+```
 
+```{r}
+head(agg4)
+```
 
+Test merging on columns.
 
+[DPLYR joins](https://dplyr.tidyverse.org/reference/join.html)
+[Join explanations using DPLYR](https://statisticsglobe.com/r-dplyr-join-inner-left-right-full-semi-anti)
 
+```{r}
+agg_join_4_5 <- inner_join(x = agg3, y = agg4, by = "County")
+```
 
+```{r}
+glimpse(agg_join_4_5)
+```
 
+```{r}
+head(agg_join_4_5)
+```
 
+Well, it looks like it did indeed join on the variable I specified.  Not sure how useful it is do so in the case of these two particular datasets.  But, test successful moving on...
 
+Need to look more into merging data together if we're asynchronously doing work and have different datasets with common columns that we could join together to have a combined dataset that contains all the different data from each into one.  Or that's the idea...
 
+```{r}
+gf_boxplot(Deaths.x ~ Race, data = agg_join_4_5)
+```
+
+```{r}
+gf_boxplot(Deaths.y ~ Race, data = agg_join_4_5)
+```
+
+Going to need to differentiate between Death.x and Death.y by renaming the variables.  Deaths.x is associated with the formerly separated grouped by "Gender" dataset while Death.y is associated with the formerly separated grouped by "Race" dataset.  So, in our INNER JOINED combined dataset we have for each "County", a row for each "Race" present in each "County" and each "Race" also has a row for each "Gender", if I'm interpreting correctly (getting late into the night at the moment).
+
+I have a feeling I will enjoy data wrangling in R the more I learn and get used to it.  Might be easier than in Python using Pandas, Numpy.
+
+Hmm, could also consider using "reticulate" to run Python AND R code cells to leverage the best of both worlds.  Would be fun to run some machine learning algorithms from Sci-kit learn or something using our datasets or something. ;D
+
+Learned about this interface between R and Python in Data-303...
+
+[Reticulate](https://rstudio.github.io/reticulate/)
+
+___
+
+Let's test reticulate....
+
+```{python}
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn import metrics
+```
+
+**Note: Doesn't seem like 'reticulate' is functional on Calvin's R-Studio server so can't use Python code chunks or import Python libraries. /sadface**
+
+```{python}
+
+print(f"hello!")
+
+my_variable = "This is a string!"
+```
+
+```{r}
+my_variable = "Another string."
+```
+
+```{python}
+r.my_variable
+```
+
+```{r}
+py$my_variable
+```
+
+It's been a while since I've done this.  But, it works.  Opens up some interesting possibilities for data analysis. =)
+
+___
+
+And time to go to sleep for now.
 
 
 
