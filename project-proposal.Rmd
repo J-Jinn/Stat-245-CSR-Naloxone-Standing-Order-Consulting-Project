@@ -3,13 +3,13 @@ title: 'Project Proposal - CSR Naloxone'
 author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  pdf_document:
-    fig_height: 8
-    fig_width: 13
   html_document:
     fig_height: 8
     fig_width: 13
     df_print: paged
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
 classoption: portrait
 ---
 
