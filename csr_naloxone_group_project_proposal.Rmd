@@ -3,13 +3,13 @@ title: 'Project Proposal - CSR Naloxone'
 author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  html_document:
-    fig_height: 8
-    fig_width: 13
-    df_print: paged
   pdf_document:
-    fig_height: 8
-    fig_width: 13
+    fig_height: 4
+    fig_width: 6.5
+  html_document:
+    fig_height: 4
+    fig_width: 6.5
+    df_print: paged
 classoption: portrait
 ---
 
@@ -240,13 +240,18 @@ What skills and strengths do your group members bring to the project that are li
 
 **Joseph Jinn**
 
-* Python/R/SQL (basic familiarity)
+* Python/R/T-SQL (basic familiarity)
+* Javascript, HTML, CSS (basic familiarity)
+* D3.js (very basic familiarity)
+* KNime (very basic familiarity)
 * GitHub/GitFlow, SourceTree - frontend for Git (version control tools)
-* PyCharm, PHPStorm R-Studio (IDE's)
+* PyCharm, PHPStorm, R-Studio (IDE's)
+* VS Code, Notepad++ (text editors)
 * Adobe Photoshop, InDesign (probably not relevant)
-* Microsoft Word, Excel, PowerPoint
+* Microsoft Word, Excel, PowerPoint, Outlook
 * Modo, Zbrush, Substance Painter (3D Modeling - irrelevant)
-* Discord, Slack, M$ Teams (communicaiton platforms)
+* Unreal Engine 4 (basic familiarity - irrelevant)
+* Discord, Slack, M$ Teams (communication platforms)
 * Windows 10 OS (please don't ask me to work on MacOS or Linux)
 * VSCode (text editor)
 * SQL Server 2019 (very basic familiarity)
