@@ -1,5 +1,5 @@
 ---
-title: "CSR Naloxone Standing Order Project - Data Cleaning, Wrangling, and Exporation (eventually)"
+title: "CSR Naloxone Standing Order Project - Data Cleaning, Wrangling, and Exploration (eventually)"
 author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: 
@@ -118,7 +118,7 @@ ___
 #### Another dataset to compare agains for our results with CDC Wonder aggregated data statistics.
 
 ```{r}
-vssr <- read_csv("datasets///VSRR_Provisional_Drug_Overdose_Death_Counts.csv")
+vssr <- read_csv("datasets//deprecated//VSRR_Provisional_Drug_Overdose_Death_Counts.csv")
 ```
 
 ```{r}
@@ -197,7 +197,7 @@ ___
 Dataset query file provided by Nana Ama Baidoo from one of her queries.
 
 ```{r}
-agg1 <- read_csv("datasets//Underlying_Cause_of_Death_1999-2018.csv")
+agg1 <- read_csv("datasets//deprecated//Underlying_Cause_of_Death_1999-2018.csv")
 ```
 
 ```{r}
@@ -213,7 +213,7 @@ ___
 Dataset query file provided by Alex Visser from one of his queries.
 
 ```{r}
-agg2 <- read_csv("datasets//Underlying_Cause_of_Death_1999-2018_2.csv")
+agg2 <- read_csv("datasets//deprecated//Underlying_Cause_of_Death_1999-2018_2.csv")
 ```
 
 ```{r}
@@ -302,7 +302,7 @@ ___
 #### Some more initial rough EDA.
 
 ```{r}
-agg3 <- read_csv("datasets//joseph_jinn_queries//CDC_GROUPBY_County_Gender_2012_2018_DrugAlcoholCauses.csv")
+agg3 <- read_csv("datasets//joseph_jinn_queries//deprecated//CDC_GROUPBY_County_Gender_2012_2018_DrugAlcoholCauses.csv")
 ```
 
 ```{r}
@@ -315,7 +315,7 @@ head(agg3)
 ___
 
 ```{r}
-agg4 <- read_csv("datasets//joseph_jinn_queries//CDC_GROUPBY_County_Race_2012_2018_DrugAlcoholCauses.csv")
+agg4 <- read_csv("datasets//joseph_jinn_queries//deprecated//CDC_GROUPBY_County_Race_2012_2018_DrugAlcoholCauses.csv")
 ```
 
 ```{r}
@@ -415,7 +415,7 @@ ___
 
 
 ```{r}
-read.table(file = "datasets//joseph_jinn_queries//Underlying Cause of Death, 1999-2018 3.txt",
+read.table(file = "datasets//joseph_jinn_queries//deprecated//Underlying Cause of Death, 1999-2018 3.txt",
            header = TRUE,
            sep = "\t"
            )

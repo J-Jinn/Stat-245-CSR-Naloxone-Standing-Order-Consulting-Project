@@ -1,0 +1,487 @@
+---
+title: "CSR Naloxone Standing Order Project - Draft Graphics"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+  html_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr) # SQL syntax ftw.
+require(readr)
+# require(reticulate) # Utilize Python programming language.
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+# options(max.print = 6000) # Ensure we can print entire summary.
+# remotes::install_github('ProjectMOSAIC/ggformula')
+```
+
+>It looks like you are off to a great start. My general recommendation is to eventually trim down some of the comments and tangents, or at least make a cleaned-up version of this file that does not document everything you tried and every thought you had in the process. It's great to have everything written down, but once you have settled on a process it is also good to have a clean file that does only that with no distractions.
+
+___
+
+>As for reading flat text files in R, it is easy; you can use readr::read_delim (there are other similar functions but I recommend it). The help should get you started, as it's very similar to read_csv(). The process is also documented at https://rsconnect.calvin.edu:3939/content/24/#section-other-data-file-formats (click "continue" until getting to section on "other text file formats"). I recommend avoiding python/reticulate on the RStudio server - it has issues and you're not doing anything here that is not easy to do directly in R.
+
+[readr documentation](https://www.rdocumentation.org/packages/readr/versions/1.3.1)
+[read_table documentation](https://readr.tidyverse.org/reference/read_table.html)
+[read_delim documentation](https://www.rdocumentation.org/packages/readr/versions/1.3.1/topics/read_delim)
+[Data Tidying Tutorial](https://rsconnect.calvin.edu:3939/content/24/#section-other-data-file-formats)
+
+```{r}
+data <- read_delim(file = "datasets//joseph_jinn_queries//deprecated//Underlying Cause of Death, 1999-2018 3.txt",
+                   delim = "\t",
+                   col_names = TRUE,
+                   col_types = NULL,
+                   na = "NA",
+                   skip = 0,
+                   n_max = Inf,
+                   guess_max = 100,
+                   progress = show_progress(),
+                   comment =c("-"),
+                   skip_empty_rows = TRUE
+)[, -c(1)]  %>% # Ignore the "Notes" column
+  filter_all(any_vars(!is.na(.)))  # Remove all rows with ALL NAs in all columns (due to "Notes" section)
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+head(data, 5)
+```
+
+```{r}
+tail(data, 5)
+```
+
+Ok, the above code SHOULD work for all data query flat text files from the CDC Wonder website.
+
+Below, re-factored into a general function for use.  Just input the filename as a string.
+
+```{r}
+parse_query <- function(file_name_as_string) {
+  data <- read_delim(file = file_name_as_string,
+                     delim = "\t",
+                     col_names = TRUE,
+                     col_types = NULL,
+                     na = "NA",
+                     skip = 0,
+                     n_max = Inf,
+                     guess_max = 100,
+                     progress = show_progress(),
+                     comment =c("-"),
+                     skip_empty_rows = TRUE
+  )[, -c(1)]  %>% # Ignore the "Notes" column
+    filter_all(any_vars(!is.na(.)))  # Remove all rows with ALL NAs in all columns (due to "Notes" section)
+  return(data)
+}
+```
+
+Test function works as intended
+```{r}
+data <- parse_query("datasets//joseph_jinn_queries//deprecated//Underlying Cause of Death, 1999-2018 3.txt")
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+head(data, 5)
+```
+
+Confirmed working. =D
+
+___
+
+>You have the process down, and it's complicated, so great work on this. However, I think you need to work together to carefully think through what queries you need to run, how to combine them, or why not to. For example, one of the datasets in your submission doesn't include causes of death at all. So I am not sure exactly how that one would help address any of your questions about naloxone/overdoses.  
+
+>My sense is that you have figured out how to get and read in and merge together the dataset, which really is great progress and an accomplishment. What you haven't really done yet, I don't think, is envisioned exactly how the dataset you need/want should look: what columns need to be there? And how will you build it from the pieces you have? This may be something to work through as a group, or with Laura, or I am happy to meet with you or a subset of you as well to work on it. But in my mind, figuring out how to go from a bunch of WONDER queries to one (or maybe a couple) of dataset that you can really use to address your research questions, is the key step you have to manage next.
+
+[CDC Wonder Data Queries](https://wonder.cdc.gov/ucd-icd10.html)
+
+[Other Data](https://www.cdc.gov/nchs/nvss/vsrr/drug-overdose-data.htm)
+[Other Data](https://www.cdc.gov/drugoverdose/data/statedeaths/drug-overdose-death-2018.html)
+
+[Basic Query Template](https://wonder.cdc.gov/controller/saved/D76/D95F252)
+
+All settings are the same except for the GROUPBY clauses (above link to basic template used for queries)
+
+Generate all possible combinations (corresponding to the 5 fields for Group-By in request form).
+```{r}
+level1 <- c("County", "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday",
+            "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause")
+level2 <- c("County", "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday",
+            "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause")
+level3 <- c("County", "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday",
+            "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause")
+level4 <- c("County", "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday",
+            "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause")
+level5 <- c("County", "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday",
+            "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause")
+```
+
+I'm currently interested in the above variables.
+
+**Note: These data have already been filtered by Drug/Alcohol Induced Causes" to only include those observations before grouping by these variables.  They are also only for the state of Michigan and the years 2012-2018.  I am following the filters suggested in the project documentation provided by our project partner - CSR**
+
+The images below capture the current state of the basic template I am using to make the queries.  Only thing that changes is what variables I'm grouping by.
+
+[Basic Query Template Image](images/basic_query_template.PNG)
+
+```{r}
+groupby2levels <- crossing(level1, level2)
+groupby2levels <- subset(groupby2levels, level1 != level2)
+groupby2levels
+```
+
+```{r}
+groupby3levels <- crossing(level1, level2, level3)
+groupby3levels <- subset(groupby3levels, level1 != level2 &
+                           level2 != level3 &
+                           level1 != level3)
+groupby3levels
+```
+
+```{r}
+groupby4levels <- crossing(level1, level2, level3, level4)
+groupby4levels <- subset(groupby4levels, level1 != level2 &
+                           level2 != level3 &
+                           level3 != level4 &
+                           level1 != level3 &
+                           level1 != level4 &
+                           level2 != level4)
+groupby4levels
+```
+
+```{r}
+groupby5levels <- crossing(level1, level2, level3, level4, level5)
+groupby5levels <- subset(groupby5levels, level1 != level2 &
+                           level2 != level3 &
+                           level3 != level4 &
+                           level4 != level5 &
+                           level1 != level3 &
+                           level1 != level4 &
+                           level1 != level5 &
+                           level2 != level4 &
+                           level2 != level5 &
+                           level3 != level5)
+groupby5levels
+```
+
+Probably a more elegant and efficient way to do this, but this works.  And yea, way too many combinations of GROUPBY for queries to test.
+
+___
+
+#### Look at all our group-by level 1 queries:
+
+```{r}
+level1_groupby_county <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_County_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_county
+```
+
+```{r}
+glimpse(level1_groupby_county)
+```
+
+```{r}
+level1_groupby_gender <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_Gender_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_gender
+```
+
+```{r}
+glimpse(level1_groupby_gender)
+```
+
+```{r}
+level1_groupby_hispanic_origin <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_HispanicOrigin_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_hispanic_origin
+```
+
+```{r}
+glimpse(level1_groupby_hispanic_origin)
+```
+
+```{r}
+level1_groupby_race <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_Race_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_race
+```
+
+```{r}
+glimpse(level1_groupby_race)
+```
+
+```{r}
+level1_groupby_year <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_Year_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_year
+```
+
+```{r}
+glimpse(level1_groupby_year)
+```
+
+```{r}
+level1_groupby_month <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_Month_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_month
+```
+
+```{r}
+glimpse(level1_groupby_month)
+```
+
+```{r}
+level1_groupby_weekday <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_Weekday_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_weekday
+```
+
+```{r}
+glimpse(level1_groupby_weekday)
+```
+
+```{r}
+level1_groupby_autopsy <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_Autopsy_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_autopsy
+```
+
+```{r}
+glimpse(level1_groupby_autopsy)
+```
+
+```{r}
+level1_groupby_place_of_death <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_PlaceOfDeath_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_place_of_death
+```
+
+```{r}
+glimpse(level1_groupby_place_of_death)
+```
+
+```{r}
+level1_groupby_drug_alcohol_induced_cause <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByOneLevel//CDC_GROUPBY_DrugAlcoholInducedCause_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level1_groupby_drug_alcohol_induced_cause
+```
+
+```{r}
+glimpse(level1_groupby_drug_alcohol_induced_cause)
+```
+
+* Common shared columns:
++ Deaths
++ Population
++ `Crude Rate`
++ `Crude Rate Lower 95% Confidence Interval`
++ `Crude Rate Upper 95% Confidence Interval`
++ `Crude Rate Standard Error`
++ `% of Total Deaths`
+
+Unique columns are based on what we group by so I won't list them individually (refer to glimpse() above)
+
+We should also rename columns to not have spaces and other special characters for ease with working with ggformula and other packages (so names aren't enclosed in "`").
+
+Define function to replace "messy" column names with "clean" version.  Adjust in the future as necessary.
+
+```{r}
+remove_whitespace_column_names <- function(my_dataframe) {
+  
+  return(names(my_dataframe) %>% str_replace_all("\\s", "_") %>% 
+    str_replace_all("%", "percent") %>% str_replace_all("/", "_") %>%tolower)
+}
+```
+
+```{r}
+# colnames(level1_groupby_autopsy) <- names(level1_groupby_autopsy) %>% str_replace_all("\\s", "_") %>% 
+#   str_replace_all("%", "percent") %>% str_replace_all("//", "_") %>%tolower
+```
+
+
+Rename columns for all datasets.
+
+```{r}
+colnames(level1_groupby_autopsy) <- remove_whitespace_column_names(level1_groupby_autopsy)
+colnames(level1_groupby_county) <- remove_whitespace_column_names(level1_groupby_county)
+colnames(level1_groupby_drug_alcohol_induced_cause) <- remove_whitespace_column_names(level1_groupby_drug_alcohol_induced_cause)
+colnames(level1_groupby_gender) <- remove_whitespace_column_names(level1_groupby_gender)
+colnames(level1_groupby_hispanic_origin) <- remove_whitespace_column_names(level1_groupby_hispanic_origin)
+colnames(level1_groupby_month) <- remove_whitespace_column_names(level1_groupby_month)
+colnames(level1_groupby_place_of_death) <- remove_whitespace_column_names(level1_groupby_place_of_death)
+colnames(level1_groupby_race) <- remove_whitespace_column_names(level1_groupby_race)
+colnames(level1_groupby_weekday) <- remove_whitespace_column_names(level1_groupby_weekday)
+colnames(level1_groupby_year) <- remove_whitespace_column_names(level1_groupby_year)
+```
+
+Check that "%" and "/" have been removed, in addition to whitespace.
+
+```{r}
+glimpse(level1_groupby_autopsy)
+glimpse(level1_groupby_drug_alcohol_induced_cause)
+```
+
+___
+
+#### Some initial draft graphics (EDA):
+
+We will use "Deaths" as our response variable when relevant as that is a column attribute across our current datasets.
+
+```{r}
+gf_point(deaths ~ autopsy, data=level1_groupby_autopsy)
+```
+
+```{r}
+gf_point(deaths ~ county, data=level1_groupby_county)
+```
+
+```{r}
+gf_point(deaths ~ drug_alcohol_induced_cause, data=level1_groupby_drug_alcohol_induced_cause)
+```
+
+```{r}
+gf_point(deaths ~ gender, data=level1_groupby_gender)
+```
+
+```{r}
+gf_point(deaths ~ hispanic_origin, data=level1_groupby_hispanic_origin)
+```
+
+```{r}
+gf_point(deaths ~ month, data=level1_groupby_month)
+```
+
+```{r}
+gf_point(deaths ~ place_of_death, data=level1_groupby_place_of_death)
+```
+
+```{r}
+gf_point(deaths ~ race, data=level1_groupby_race)
+```
+
+```{r}
+gf_point(deaths ~ weekday, data=level1_groupby_weekday)
+```
+
+```{r}
+gf_point(deaths ~ year, data=level1_groupby_year)
+```
+
+Plots aren't "pretty" but usable.
+
+And that's it for the queries involving just one level of group-by.
+
+___
+
+So, we should be able to JOIN these 10 basic datasets in order to mimic multi-level groupbys without having to do individual queries for every possible combination.  Let's see if we can derive the same aggregate statistics using just our base 10 queries.  As a test, we'll do a CDC Wonder Data query that is a 2-level groupby and see if we can replicate the results using just our base tables.
+
+First, we do the usual as we did for our group-by level 1 tables.
+
+```{r}
+level2_groupby_race_gender <- parse_query(
+  "datasets//joseph_jinn_queries//GroupByTwoLevels//CDC_GROUPBY_Race_Gender_2012_2018_Michigan_DrugAlcoholCauses.txt")
+level2_groupby_race_gender
+```
+
+```{r}
+glimpse(level2_groupby_race_gender)
+```
+
+Fix the messy column names.
+
+```{r}
+colnames(level2_groupby_race_gender) <- remove_whitespace_column_names(level2_groupby_race_gender)
+```
+
+Confirmed fixed.
+
+```{r}
+glimpse(level2_groupby_race_gender)
+```
+
+EDA:
+
+```{r}
+gf_point(deaths ~ race | gender, data=level2_groupby_race_gender) + coord_flip()
+```
+
+
+[DPLYR joins](https://dplyr.tidyverse.org/reference/join.html)
+[Join explanations using DPLYR](https://statisticsglobe.com/r-dplyr-join-inner-left-right-full-semi-anti)
+
+Now, let's try to join the individual "Race" and "Gender" group-by tables and see what happens.
+
+```{r}
+level1_race_gender_joined <- full_join(level1_groupby_race, level1_groupby_gender)
+```
+
+```{r}
+glimpse(level1_race_gender_joined)
+```
+
+```{r}
+head(level1_race_gender_joined, 10)
+```
+
+```{r}
+gf_point(deaths ~ race | gender, data=level1_race_gender_joined) + coord_flip()
+```
+
+Hmm, not quite what we want.  This probably won't work as we don't have access to the actual data itself.  If we did, we would probably be using the groupby() function with the dataset, which is essentially the same thing the groupby section on the CDC Wonder query request form does in order to produce the aggregate statistics.
+
+But, if we keep grouping by more and more variables we should hopefully find interesting patterns and trends in the data...just there's a lot of possible combinations as seen above.
+
+Will keep experimenting but time to sleep since it's midnight and I have a class tomorrow morning.
+
+___
+
+To be continued...
+
+___
+
+>Once you decide what variables you will be using, you will also have to deal with some formatting issues. For example, for some numeric values, the WONDER data is coded "Unreliable" when for some reason the metric can't be calculated. This means that all the numeric data in that variable gets coded as strings, and you have to force it back to numeric (which will turn the "Unreliable" entries to missing values). One way to do this is to use parse_number(Variablename).  There may be other things like this, but you first have to identify exactly which variables you'll really be using; otherwise there are just too many and you don't have time to clean them all.
+
+
+
+___
+
+>When I see your draft figures and/or models and can thus confirm that you've done the work described above -- choosing a set of variables to work with and making sure they are all ready to use -- I will return and update this score with no explicit revisions needed from your team.
+
