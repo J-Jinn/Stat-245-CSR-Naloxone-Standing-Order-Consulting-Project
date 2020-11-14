@@ -671,32 +671,48 @@ All variables currently under consideration:
 
 "County"
 "Gender"
-"Hispanic Origin"
 "Race"
 "Year"
-"Month"
-"Weekday"
-"Autopsy"
-"Place of Death"
 "Drug/Alcohol Induced Cause"
 "Single-Year Ages",
 "Five-Year Age Groups"
-"Ten-Year Age Groups"
+"Ten-Year Age Groups" (use broadest)
 
-"2013 Urbanization" - classifies population density and other factors at the county level - pick between the 2006 or the 2013 NCHS Urban-Rural Classification Scheme for Counties. 
 
-"deaths"
+Common to all queries:
+
+"deaths" (use offset for total # of deaths or population)
 "population"
 
 "crude_rate" - Crude Rates are expressed as the number of deaths reported each calendar year per the factor you select. The default factor is per 100,000 population, reporting the death rate per 100,000 persons. Crude Rate = Count / Population * 100,000
 
 "percent_of_total_deaths"
 
+
+Tentative:
+
+"Hispanic Origin"
+"Autopsy"
+"Place of Death"
+
+Ignore:
+
+"2013 Urbanization" - classifies population density and other factors at the county level - pick between the 2006 or the 2013 NCHS Urban-Rural Classification Scheme for Counties. 
+
+"Month"
+"Weekday"
+
+Considerations:
+
+Differences in trends over time in .... (multiple panels or colors)
+Number of overdose deaths affected by geographic and demographic groups.
+
+
 ___
 
 >Trends in overdose deaths in Kent County compared to other counties.
 
-Random Effects:
+Random Effects (deprecated):
 
 * (1 | 2013 Urbanization) - So, there could be differences in the # of deaths between urbanization classes and we would also want to generalize to the population as a whole without necessarily referencing any specific type of location class.
 
@@ -707,7 +723,7 @@ Random Effects:
 * (1 | County / binned Age) - The # of deaths could vary between county and between age groups within each county.
 
 
-Interactions:
+Interactions (think it through some more...):
 
 * 2013 Urbanization and Place of Death - The type of location could determine the likely place of death as hospitals are more likely to be located in urban centers rather than rural areas, etc.
 
@@ -726,6 +742,12 @@ Interactions:
 * County and Race - Similar to 2013 Urbanization and Race.
 
 * County and Population - Similar to 2013 Urbanization and Population.
+
+
+Updated list:
+
+* Gender and Race?
+* Year and County?
 
 
 Offsets(when applicable): 
@@ -1132,6 +1154,7 @@ Compare cause of death including narcotics to non-narcotics.
 ___
 
 Reporting
+
 At the full group session at the end of today’s class, you’ll be asked to present this plan to the rest of your classmates (briefly, like 1-2 minutes).
 
 Explain what question you are trying to answer, where your data come from, and how you designed your model. You may want to share a screen showing a glimpse() of your data, or the model formula you’re planning to use.
