@@ -1,0 +1,12 @@
+name: csr_naloxone_draft_interactive_element
+title: csr_naloxone_draft_interactive_element
+username: jj47
+account: jj47
+server: rsconnect.calvin.edu
+hostUrl: https://rsconnect.calvin.edu:3939/__api__
+appId: 123
+bundleId: 336
+url: https://rsconnect.calvin.edu:3939/content/123/
+when: 1605643839.37174
+asMultiple: FALSE
+asStatic: FALSE

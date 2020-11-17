@@ -51,7 +51,15 @@ options(max.print = 6000) # Ensure we can print entire summary.
 
 **This is a draft model to try to answer the research question: "Trends in overdose deaths in Kent County compared to other counties."**
 
+**Lines 762-965 in the RMD is the negative binomial model for the first research question.**
+
 **Update: Also fitting an additional model to answer another research question: "Compare cause of death including narcotics to non-narcotics."**
+
+**Lines 1076-1339 in the RMD is the logistic regression model I attempted to fit for the 3rd research question.  This one has severe issues.**
+
+**Feel free to ignore everything else until I manage to re-factor everything into version 2 of the draft model.**
+
+**Note: Had to re-tidy and re-clean the data.  Also did simple EDA and made prediction plots.  Feel free to ignore those sections and the immediate section below.**
 
 ___
 
@@ -529,7 +537,7 @@ Ok, things are looking good now.
 But, we should also export out our cleaned and combined dataset to a CSV file for future use.
 
 ```{r}
-write.csv2(data,"datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv", append = FALSE)
+write.csv2(data,"datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv", append = FALSE, row.names = FALSE)
 ```
 
 And test we can read everything back in correctly.
@@ -566,7 +574,7 @@ gf_bar(~gender, data = data, alpha = 0.25, color = "#087EC6",
 
 ```{r}
 gf_bar(~race, data = data, alpha = 0.25, color = "#087EC6",
-       xlab="Raceh",
+       xlab="Race",
        ylab="Number of Observations",
        title="CDC Wonder Underlying Cause of Death Dataset Queries",
        subtitle = "",
