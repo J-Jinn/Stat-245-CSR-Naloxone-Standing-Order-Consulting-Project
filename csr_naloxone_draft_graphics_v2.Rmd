@@ -1,0 +1,919 @@
+---
+title: "CSR Naloxone Standing Order Project - Draft Graphics"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+  html_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr) # SQL syntax ftw.
+require(readr)
+require(ggeffects)
+# require(reticulate) # Utilize Python programming language.
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+# remotes::install_github('ProjectMOSAIC/ggformula')
+```
+
+# Initial import and preparation.
+
+Import data.
+
+```{r}
+data <- read_csv2("datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv")
+```
+
+```{r}
+glimpse(data)
+```
+
+### Convert columns to appropriate data types.
+
+```{r}
+data <- data %>% mutate_if(is.character, as.factor)
+data <- data %>% mutate(county_code = as.factor(county_code))
+data <- data %>% mutate(year = as.factor(year))
+data <- data %>% mutate(year_code = as.factor(year_code))
+data <- data %>% mutate(percent_of_total_deaths = as.numeric(gsub("%", "", percent_of_total_deaths)))
+data <- data %>% mutate(deaths = as.integer(deaths))
+data <- data %>% mutate(population = as.integer(population))
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+head(data)
+```
+
+___
+
+
+# EDA - Exploratory Data Analysis (will correct labels, etc., in the future)
+
+**These are initial EDA graphs for the entire dataset (drug, alcohol, and all non-drug/alchol causes of death).**
+
+```{r}
+gf_bar(~gender, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Gender",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + labs(fill = "Vehicle Searched?") + gf_jitter()
+```
+
+```{r}
+gf_bar(~race, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Race",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+```{r}
+gf_bar(~year, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Year",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+)
+```
+
+```{r}
+gf_bar(~ten_year_age_groups, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="10 Year Age Groups",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+```{r}
+gf_bar(~county, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="County",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+```{r}
+gf_bar(~cause_of_death, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Cause of Death",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+)
+```
+
+```{r}
+gf_point(deaths ~ population, data = data, alpha = 0.1, color = "#087EC6",
+         xlab="Deaths",
+         ylab="Population",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+```{r}
+gf_point(deaths ~ crude_rate_added, data = data, alpha = 0.1, color = "#087EC6",
+         xlab="Crude Rate Added",
+         ylab="Deaths",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+```{r}
+gf_point(deaths ~ percent_of_total_deaths, data = data, alpha = 0.25, color = "#087EC6",
+         xlab="Percent of Total Deaths",
+         ylab="Deaths",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+Quick and dirty EDA.
+
+___
+
+
+**These are initial EDA graphs for the subset of the dataset with ONLY drug-related deaths.**
+
+```{r}
+drug_deaths_only_data <- data %>% filter(data$cause_of_death == "drug")
+```
+
+```{r}
+glimpse(drug_deaths_only_data)
+```
+
+```{r}
+gf_bar(~gender, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+       xlab="Gender",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + labs(fill = "Vehicle Searched?") + gf_jitter()
+```
+
+```{r}
+gf_bar(~race, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+       xlab="Raceh",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+```{r}
+gf_bar(~year, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+       xlab="Year",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+)
+```
+
+```{r}
+gf_bar(~ten_year_age_groups, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+       xlab="10 Year Age Groups",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+```{r}
+gf_bar(~county, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+       xlab="County",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+```{r}
+gf_bar(~cause_of_death, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+       xlab="Cause of Death",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+)
+```
+
+```{r}
+gf_point(deaths ~ population, data = drug_deaths_only_data, alpha = 0.1, color = "#087EC6",
+         xlab="Deaths",
+         ylab="Population",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+```{r}
+gf_point(deaths ~ crude_rate_added, data = drug_deaths_only_data, alpha = 0.1, color = "#087EC6",
+         xlab="Crude Rate Added",
+         ylab="Deaths",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+```{r}
+gf_point(deaths ~ percent_of_total_deaths, data = drug_deaths_only_data, alpha = 0.25, color = "#087EC6",
+         xlab="Percent of Total Deaths",
+         ylab="Deaths",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+___
+___
+
+
+```{r}
+drug_data <- data %>% filter(data$cause_of_death == "drug")
+```
+
+And we should probably scale our predictors try to resolve some NA issues with coefficients.
+
+```{r}
+min(drug_data$deaths)
+max(drug_data$deaths)
+min(drug_data$population)
+max(drug_data$population)
+min(drug_data$crude_rate_added)
+max(drug_data$crude_rate_added)
+min(drug_data$percent_of_total_deaths)
+max(drug_data$percent_of_total_deaths)
+```
+
+```{r}
+drug_data <- drug_data %>%
+  mutate(scaled_crude_rate_added = scale(crude_rate_added),
+         scaled_percent_of_total_deaths = scale(percent_of_total_deaths),
+         scaled_population = scale(population)
+  )
+```
+
+```{r}
+glimpse(drug_data)
+```
+
+# Model Assessment Plots (for the 1st research question).
+```{r}
+model_nbinom2 <- glmmTMB(deaths ~ gender + race + year + ten_year_age_groups + 
+                           scaled_population + scaled_percent_of_total_deaths,
+                         data = drug_data, 
+                         family = nbinom2(link = "log"))
+```
+
+```{r}
+summary(model_nbinom2)
+```
+
+```{r}
+overdisp_fun(model_nbinom2)
+```
+
+Over-dispersion looks good as it's below 2-3 units.
+
+```{r}
+gf_acf(~model_nbinom2)
+```
+
+```{r}
+gf_acf(~model_nbinom2) %>% gf_lims(y = c(-0.2, 0.2), x = c(0, 30))
+```
+
+And we have some issues with independence of residuals at two of the lags.  This doesn't look terrible though.
+
+
+```{r}
+model_sim <- simulateResiduals(model_nbinom2, n = 1000)
+```
+
+```{r}
+gf_point(model_sim$scaledResiduals ~ fitted(model_nbinom2)) %>%
+  gf_labs(x = "Predicted # of Deaths",
+          y = 'Scaled Residuals')
+```
+
+And this definitely isn't a uniform distribution.  I'm going to guess we have issues with linearity and possibly mean-variance.
+
+Could also check log(response variable) vs. predictors and scaled residuals vs. predictors but at this point it's clear this model fails.
+
+___
+
+# Prediction plots (for the 1st research question).
+
+```{r}
+ggpredict(model_nbinom2)
+```
+
+```{r}
+# t(get_fixed(logit_model_no_offset)) %>% pander()
+```
+
+```{r}
+# get_fixed(model_nbinom2)
+```
+
+The other two functions to obtain fixed values for predictors fails. So, going with ggpredict().
+
+```{r}
+glimpse(drug_data)
+```
+
+Prediction plot for "gender":
+
+And the long-winded manual way...
+
+```{r}
+# note: "chr" variables have unique() values, "fct" variables have level()s
+gender_prediction_data <- expand.grid(
+  # char_variable = pull(police_stop, char_variable) %>% unique(),
+  # quantitative_variable = seq(from = 0, to = 10000, by = 100),
+  # categorical_variable = pull(police_stop, categorical_variable) %>% factor() %>% levels(),
+  gender = pull(drug_data, gender) %>% factor() %>% levels(),
+  race = "Black or African American",
+  year = "1999",
+  ten_year_age_groups = "15-24 years",
+  scaled_population = -0.00,
+  scaled_percent_of_total_deaths = 0.00)
+
+# compute predictions with SEs
+gender_predictions <- predict(model_nbinom2, 
+                              newdata = gender_prediction_data,
+                              type = 'response', se.fit = TRUE)
+
+glimpse(gender_predictions)
+```
+
+```{r}
+# add predicted values and CIs to the hypothetical dataset
+gender_prediction_data <- gender_prediction_data %>%
+  mutate(predictions = gender_predictions$fit,
+         CI_low = gender_predictions$fit - 1.96 * gender_predictions$se.fit,
+         CI_hi = gender_predictions$fit + 1.96 * gender_predictions$se.fit)
+```
+
+```{r}
+gf_point(predictions ~ gender, data = gender_prediction_data,
+         alpha = 1.0, color = "black",
+         ylab="Predicted (fitted) Values of Deaths",
+         xlab="Gender",
+         title="CDC Wonder Data - Prediction Plot",
+         subtitle = "",
+         caption = ""
+) %>%
+  # gf_ribbon(CI_low + CI_hi ~ single_year_ages_factor) %>%
+  gf_errorbar(CI_low + CI_hi ~ gender) %>% gf_lims(y = c(15, 25))
+```
+
+Prediction plot for "race":
+
+```{r}
+ggpredict(model_nbinom2, 
+          terms = 'race',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "year":
+
+```{r}
+ggpredict(model_nbinom2, 
+          terms = 'year',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "ten_year_age_groups":
+
+```{r}
+ggpredict(model_nbinom2, 
+          terms = 'ten_year_age_groups',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "population":
+
+```{r}
+ggpredict(model_nbinom2, 
+          terms = 'scaled_population',
+          type = 'fixed') %>% plot()
+```
+Prediction plot for "scaled_percent_of_total_deaths":
+
+```{r}
+ggpredict(model_nbinom2, 
+          terms = 'scaled_percent_of_total_deaths',
+          type = 'fixed') %>% plot()
+```
+
+___
+
+# Model Assessment Plots (for the 3rd research question).
+
+Convert to binary response and store in new variable.  Then, reassign as "police_stop".
+```{r}
+all_data <- data %>% mutate(drug_death = case_when(
+  cause_of_death == "drug" ~ "yes",
+  TRUE ~ "no"))
+```
+
+Convert response to a factor.
+
+```{r}
+all_data <- all_data %>% mutate(drug_death = as.factor(drug_death))
+```
+
+```{r}
+all_data <- all_data %>% mutate(drug_death = fct_relevel(drug_death, c("no", "yes")))
+```
+
+```{r}
+levels(all_data$drug_death)
+```
+
+```{r}
+glimpse(all_data)
+```
+
+```{r}
+model_logit <- glm(drug_death ~ gender + race + year + ten_year_age_groups + 
+                     population + deaths + percent_of_total_deaths + gender*race,
+                   data = all_data, family = binomial(link = 'logit'), na.action = "na.fail")
+```
+
+```{r}
+summary(model_logit)
+```
+
+According to Week 7 slides on Binary Regression...
+
+* Response variable is logical (data can be proportion but not binary!)
+* Linearity: logit(p) should have a linear relationship with each predictor variable. (A bit hard to check - can bin predictor and then plot scatter plot)
+* Independence of Residuals: Same as usual.
+* Mean-variance relationship: scaled residuals have uniform distribution and no trends.
+* NO distributional assumptions about residuals.
+
+___
+
+Our response variable "drug_death" is logical (since I made it so).  So, this check passes with flying colors.
+
+___
+
+Auto-Correlation Plots:
+
+```{r}
+acf(resid(model_logit))
+```
+
+Ok, that fails miserably right from the start.
+
+Attempt to fix...
+
+```{r}
+require(lme4)
+```
+
+```{r}
+model_logit_fix_attempt <- glmer(drug_death ~ gender + race + year + ten_year_age_groups + 
+                     population + deaths + percent_of_total_deaths + gender*race + (1 | county),
+                   data = all_data, family = binomial(link = 'logit'), na.action = "na.fail", nAGQ = 0)
+```
+
+```{r}
+msummary(model_logit_fix_attempt)
+```
+
+Well, at least it's not giving NA's like with glmmTMB.
+
+```{r}
+acf(resid(model_logit_fix_attempt))
+```
+
+And that didn't do anything.  Time to ask Prof. DeRuiter for help.
+
+Maybe a logistic regression model with a binary response isn't suitable in this scenario?
+
+Continuing on for kicks and giggles though.
+
+___
+
+DHARMa package scaled residuals versus fitted (predicted) plot:
+
+```{r}
+model_logit_sim <- simulateResiduals(model_logit, n = 1000)
+```
+
+```{r}
+gf_point(model_logit_sim$scaledResiduals ~ fitted(model_logit)) %>%
+  gf_labs(x = "Predicted Probability for 'yes' is a drug-related",
+          y = 'Scaled Residuals')
+```
+
+Mean-Variance relationship does seem okay as this looks like a uniform distribution.  Linearity should be fine too from a glance though the area in the lower middle is a little sparse compared to the rest.
+
+___
+
+#### Plot each quantitative predictor binned against the response.
+
+Code in the section below just checks that we are binning correctly and does some other prep in preparation for the linearity check plots.
+
+```{r}
+all_data_binned <- all_data %>%
+  mutate(binned_deaths = cut_number(deaths, 10)) 
+```
+
+```{r}
+all_data_binned_levels <- unique(all_data_binned$binned_deaths)
+all_data_binned_levels
+all_data_binned_observations = c()
+```
+
+```{r}
+for (element in all_data_binned_levels) {
+  print(element)
+  value <- nrow(filter(all_data_binned, binned_deaths == element))
+  print(value)
+  all_data_binned_observations <- append(all_data_binned_observations, value)
+}
+print(all_data_binned_observations)
+all_data_binned_observations <- c()
+```
+
+Bins look pretty good in terms of the number of available observations in each bin.
+
+```{r}
+median(all_data$deaths)
+class(median(all_data$deaths))
+```
+
+```{r}
+prop(all_data$drug_death == "yes")
+class(prop(all_data$drug_death == "yes"))
+```
+
+```{r}
+glimpse(all_data_binned)
+```
+
+___
+
+```{r}
+all_data_grouped <- all_data %>%
+  mutate(binned_deaths = cut_number(deaths, 10)) %>%
+  group_by(binned_deaths) %>%
+  summarize(proportion_drug_deaths = prop(drug_death == "yes"),
+            median_deaths = median(deaths))
+```
+
+```{r}
+head(all_data_grouped, 5)
+```
+
+```{r}
+gf_point(proportion_drug_deaths ~ median_deaths, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'deaths' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+```{r}
+gf_point(logit(proportion_drug_deaths) ~ median_deaths, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+          ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'deaths' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+Hmm, not quite a linear relationship.
+
+___
+
+```{r}
+all_data_binned <- all_data %>%
+  mutate(binned_population = cut_number(population, 10)) 
+```
+
+```{r}
+all_data_binned_levels <- unique(all_data_binned$binned_population)
+all_data_binned_levels
+all_data_binned_observations = c()
+```
+
+```{r}
+for (element in all_data_binned_levels) {
+  print(element)
+  value <- nrow(filter(all_data_binned, binned_population == element))
+  print(value)
+  all_data_binned_observations <- append(all_data_binned_observations, value)
+}
+print(all_data_binned_observations)
+all_data_binned_observations <- c()
+```
+
+Bins look pretty good in terms of the number of available observations in each bin.
+
+___
+
+```{r}
+all_data_grouped <- all_data %>%
+  mutate(binned_population = cut_number(population, 10)) %>%
+  group_by(binned_population) %>%
+  summarize(proportion_drug_deaths = prop(drug_death == "yes"),
+            median_population = median(population))
+```
+
+```{r}
+head(all_data_grouped, 5)
+```
+
+```{r}
+gf_point(proportion_drug_deaths ~ median_population, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'population' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+```{r}
+gf_point(logit(proportion_drug_deaths) ~ median_population, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Logit(Proportion) where drug_death == 'yes'",
+         xlab="Median of 'population' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+Yea...
+
+___
+
+```{r}
+all_data_binned <- all_data %>%
+  mutate(binned_percent_of_total_deaths = cut_number(percent_of_total_deaths, 10)) 
+```
+
+```{r}
+all_data_binned_levels <- unique(all_data_binned$binned_percent_of_total_deaths)
+all_data_binned_levels
+all_data_binned_observations = c()
+```
+
+```{r}
+for (element in all_data_binned_levels) {
+  print(element)
+  value <- nrow(filter(all_data_binned, binned_percent_of_total_deaths == element))
+  print(value)
+  all_data_binned_observations <- append(all_data_binned_observations, value)
+}
+print(all_data_binned_observations)
+all_data_binned_observations <- c()
+```
+
+Bins look pretty good in terms of the number of available observations in each bin.
+
+___
+
+```{r}
+all_data_grouped <- all_data %>%
+  mutate(binned_percent_of_total_deaths = cut_number(percent_of_total_deaths, 10)) %>%
+  group_by(binned_percent_of_total_deaths) %>%
+  summarize(proportion_drug_deaths = prop(drug_death == "yes"),
+            median_percent_of_total_deaths = median(percent_of_total_deaths))
+```
+
+```{r}
+head(all_data_grouped, 5)
+```
+
+```{r}
+gf_point(proportion_drug_deaths ~ median_percent_of_total_deaths, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'percent_of_total_deaths' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+```{r}
+gf_point(logit(proportion_drug_deaths) ~ median_percent_of_total_deaths, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Logit(Proportion) where drug_death == 'yes'",
+         xlab="Median of 'percent_of_total_deaths' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+
+Hmm, just noticed that you might be able to drive percent_of_total_deaths by deaths / population similarly to how crude_rate is deaths / population * 1000.
+
+Will look into it at some point.
+
+___
+
+# Prediction plots (for the 3rd research question).
+
+Get the fixed values we will be using for the plots.
+
+```{r}
+ggpredict(model_logit)
+```
+
+```{r}
+t(get_fixed(model_logit)) %>% pander()
+```
+
+```{r}
+get_fixed(model_logit)
+```
+
+```{r}
+glimpse(all_data)
+```
+
+And our model is obviously terrible.
+
+Prediction plot for "gender":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'gender',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "race":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'race',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "year":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'year',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "ten_year_age_groups":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'ten_year_age_groups',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "deaths":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'deaths',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "population":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'population',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "scaled_percent_of_total_deaths":
+
+```{r}
+ggpredict(model_logit, 
+          terms = 'percent_of_total_deaths',
+          type = 'fixed') %>% plot()
+```
+
+Prediction plot for "gender*race":
+
+```{r}
+ggpredict(model_logit, 
+          terms = c('gender', 'race'),
+          type = 'fixed') %>% plot()
+```
+
+___
+___
+___
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

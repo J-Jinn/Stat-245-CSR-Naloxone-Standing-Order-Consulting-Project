@@ -1,0 +1,105 @@
+---
+title: "Template for EDA, Model fitting/selection/assessment, predictoin plots, etc., for Current Dataset"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+  html_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr) # SQL syntax ftw.
+require(readr)
+# require(reticulate) # Utilize Python programming language.
+require(ggeffects)
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+# remotes::install_github('ProjectMOSAIC/ggformula')
+```
+
+### Initial Preparation
+
+Import data.
+
+```{r}
+data <- read_csv2("datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv")
+```
+
+```{r}
+glimpse(data)
+```
+
+### Convert columns to appropriate data types.
+
+```{r}
+data <- data %>% mutate_if(is.character, as.factor)
+data <- data %>% mutate(county_code = as.factor(county_code))
+data <- data %>% mutate(year = as.factor(year))
+data <- data %>% mutate(year_code = as.factor(year_code))
+data <- data %>% mutate(percent_of_total_deaths = as.numeric(gsub("%", "", percent_of_total_deaths)))
+data <- data %>% mutate(deaths = as.integer(deaths))
+data <- data %>% mutate(population = as.integer(population))
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+head(data)
+```
+
+And we are set to begin EDA, model fitting/selection/assessment, and prediction plots.
+
+**Note: Use "crude_rate_added" instead of "crude_rate".**.
+
+___
+
+### Begin work here.
+
+Placeholder text.
+
+```{r}
+# Placeholder chunk.
+```
+
+
+
+
+
+
+
+
+

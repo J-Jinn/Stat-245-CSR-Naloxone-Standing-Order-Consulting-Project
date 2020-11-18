@@ -1,0 +1,396 @@
+---
+title: "CSR Naloxone Standing Order Project - Draft Model(s)"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+  html_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr) # SQL syntax ftw.
+require(readr)
+# require(reticulate) # Utilize Python programming language.
+require(ggeffects)
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+# remotes::install_github('ProjectMOSAIC/ggformula')
+```
+
+# Data Tidying (yet again)
+
+[readr documentation](https://www.rdocumentation.org/packages/readr/versions/1.3.1)
+
+[read_table documentation](https://readr.tidyverse.org/reference/read_table.html)
+
+[read_delim documentation](https://www.rdocumentation.org/packages/readr/versions/1.3.1/topics/read_delim)
+
+[Data Tidying Tutorial](https://rsconnect.calvin.edu:3939/content/24/#section-other-data-file-formats)
+
+```{r}
+parse_query <- function(file_name_as_string) {
+  data <- read_delim(file = file_name_as_string,
+                     delim = "\t",
+                     col_names = TRUE,
+                     col_types = NULL,
+                     na = "NA",
+                     skip = 0,
+                     n_max = Inf,
+                     guess_max = 100,
+                     progress = show_progress(),
+                     comment =c("-"),
+                     skip_empty_rows = TRUE
+  )[, -c(1)]  %>% # Ignore the "Notes" column
+    filter_all(any_vars(!is.na(.)))  # Remove all rows with ALL NAs in all columns (due to "Notes" section)
+  return(data)
+}
+```
+
+Parse the file(s).
+
+```{r}
+data_drug <- parse_query("datasets//joseph_jinn_queries//CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneDrugInducedCausesAllDates9decimalsPer1k.txt")
+```
+
+```{r}
+glimpse(data_drug)
+```
+
+```{r}
+data_alcohol <- parse_query("datasets//joseph_jinn_queries//CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAlcoholInducedCausesAllDates9decimalsPer1k.txt")
+```
+
+```{r}
+glimpse(data_alcohol)
+```
+
+Ignoring the errors. Error messages seem to indicate failing to parse the "Notes" section which we do not care about as they aren't data.
+
+```{r}
+data_other <- parse_query("datasets//joseph_jinn_queries//CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllOtherNonDrugNonAlcoholCausesAllDates9decimalsPer1k.txt")
+```
+
+```{r}
+glimpse(data_other)
+```
+
+___
+
+Add new variable specifying whether it was "alcohol", "drug", or "other" type of cause for death.
+
+```{r}
+data_drug <- data_drug %>% mutate(`Cause Of Death` = "drug")
+data_alcohol <- data_alcohol %>% mutate(`Cause Of Death` = "alcohol")
+data_other <- data_other %>% mutate(`Cause Of Death` = "other")
+```
+
+
+```{r}
+glimpse(data_drug)
+glimpse(data_alcohol)
+glimpse(data_other)
+```
+
+___
+
+Convert logical gender code to character gender code (R arbitrarily set "Female" = FALSE and "Male" = NA.
+
+```{r}
+head(data_drug, 5)
+```
+
+```{r}
+tail(data_drug, 5)
+```
+
+___
+
+```{r}
+data_drug <- data_drug %>% mutate(`Gender Code` = case_when(`Gender` ==  'Female' ~ 'F',
+                                                            TRUE ~ 'M'))
+```
+
+```{r}
+head(data_drug, 5)
+```
+
+```{r}
+tail(data_drug, 5)
+```
+
+```{r}
+data_other <- data_other %>% mutate(`Gender Code` = case_when(`Gender` ==  'Female' ~ 'F',
+                                                              TRUE ~ 'M'))
+```
+
+```{r}
+head(data_other, 5)
+```
+
+```{r}
+tail(data_other, 5)
+```
+
+___
+
+[DPLYR joins](https://dplyr.tidyverse.org/reference/join.html)
+
+[Join explanations using DPLYR](https://statisticsglobe.com/r-dplyr-join-inner-left-right-full-semi-anti)
+
+Join the drug, alcohol, and other data for a complete dataset.
+
+```{r}
+data <- bind_rows(data_drug, data_alcohol, data_other)
+```
+
+```{r}
+glimpse(data)
+```
+
+Ok, looking good so far.
+
+___
+
+[CDC Wonder Data Queries](https://wonder.cdc.gov/ucd-icd10.html)
+
+[Other Data](https://www.cdc.gov/nchs/nvss/vsrr/drug-overdose-data.htm)
+
+[Other Data](https://www.cdc.gov/drugoverdose/data/statedeaths/drug-overdose-death-2018.html)
+
+[Basic Query Template](https://wonder.cdc.gov/controller/saved/D76/D95F739)
+
+* Common shared columns (if included in result set):
++ Deaths
++ Population
++ `Crude Rate`
++ `Crude Rate Lower 95% Confidence Interval`
++ `Crude Rate Upper 95% Confidence Interval`
++ `Crude Rate Standard Error`
++ `% of Total Deaths`
+
+Unique columns are based on what we group by (as seen in the dataframe above).
+
+We should also rename columns to not have spaces and other special characters for ease with working with ggformula and other packages (so names aren't enclosed in "`").
+
+Define function to replace "messy" column names with "clean" version.  Adjust in the future as necessary.
+
+[R - Regular Expressions](https://rstudio.com/wp-content/uploads/2016/09/RegExCheatsheet.pdf)
+
+```{r}
+remove_whitespace_column_names <- function(my_dataframe) {
+  
+  return(names(my_dataframe) %>% str_replace_all("\\s", "_") %>% 
+           str_replace_all("%", "percent") %>% 
+           str_replace_all("/", "_") %>% 
+           str_replace_all("-", "_") %>% 
+           str_replace_all("^([0-9]+)", "c\\1") %>% # Replace beginning number with dummy c - character.
+           tolower)
+}
+```
+
+Clean/tidy the column names:
+
+```{r}
+colnames(data) <- remove_whitespace_column_names(data)
+```
+
+Check that "%", "-", and "/" have been removed, in addition to whitespace.
+
+```{r}
+glimpse(data)
+```
+
+___
+
+If necessary:
+
+Replace all rows with "Suppressed" in the "Deaths" column with randomly generated values between 0-9 since that is the criteria for when data values are labeled as "Suppressed".  
+
+Replace all rows with "Suppressed" in the "Population" column with randomly generated values between 0-9 since that is the criteria for when data values are labeled as "Suppressed".
+
+Crude rates are marked as "Unreliable" when death counts are less than 20.  We could manually create a crude rate by dividing "population" by "deaths" multiplied by X individuals.
+
+Crude Rate = Count / Population * (per specified # of people)
+
+Crude rates are marked as "Not Applicable" when "Population" is unavailable.
+
+```{r}
+count(data$deaths == "Suppressed")
+count(data$population == "Suppressed")
+count(data$crude_rate == "Suppressed")
+count(data$crude_rate == "Unreliable")
+count(data$crude_rate == "Not Applicable")
+```
+
+Good, we have no "Suppressed" rows but we do have a decent amount of "Unreliable" rows for crude rates.
+
+Since the crude rates for our dataset were calculated per 1,000 people, we will use that for manual creation of crude rates for "Unreliable" rows.
+
+**TODO: Compute crude rates for "Unreliable" rows and insert into dataset**
+
+```{r}
+data_temp <- data %>% mutate(crude_rate_added = case_when(
+  crude_rate == 'Unreliable' ~ deaths / population * 1000,
+  TRUE ~ as.numeric(crude_rate)
+))
+```
+
+```{r}
+glimpse(data_temp)
+```
+
+And double-check that our manual computations for crude_rate makes sense.
+
+```{r}
+# which(data$crude_rate == "Unreliable")
+```
+
+Row 9 and 12, among many others had "Unreliable" as the crude_rate.  With our manual computations of crude_rate, we seem to have obtained reasonable values.
+
+Also, we have copied over crude_rate values for rows that had existing values for crude_rate successfully.  So, we are all set.
+
+```{r}
+head(data, 20)
+```
+```{r}
+head(data_temp, 20)
+```
+
+And re-asssign temporary dataframe back to our original dataframe.
+
+```{r}
+data <- data_temp
+```
+___
+
+Now, we should convert the data types for each attribute to the ones desired for model fitting.
+
+```{r}
+data <- data %>% mutate_if(is.character, as.factor)
+```
+
+```{r}
+glimpse(data)
+```
+
+We will keep crude rate as a "factor" for now.  It does contain "Unreliable" for quite a few rows.
+
+```{r}
+
+```
+
+And county_code, year, and year_code, should be a factor, not a numeric (double) type.
+
+```{r}
+data <- data %>% mutate(county_code = as.factor(county_code))
+data <- data %>% mutate(year = as.factor(year))
+data <- data %>% mutate(year_code = as.factor(year_code))
+```
+
+```{r}
+glimpse(data)
+```
+
+And we want percent_of_total_deaths as a numeric type too not a factor or character with a % sign.
+
+```{r}
+data <- data %>% mutate(percent_of_total_deaths = as.numeric(gsub("%", "", percent_of_total_deaths)))
+```
+
+```{r}
+glimpse(data)
+```
+
+And last but not least, "deaths" and "population" should be integer instead of double numeric sub-types.
+
+```{r}
+data <- data %>% mutate(deaths = as.integer(deaths))
+data <- data %>% mutate(population = as.integer(population))
+```
+
+```{r}
+glimpse(data)
+```
+
+Ok, things are looking good now.
+
+But, we should also export out our cleaned and combined dataset to a CSV file for future use.
+
+```{r}
+# write.csv2(data,"datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv", append = FALSE, row.names = FALSE)
+```
+
+And test we can read everything back in correctly.
+
+```{r}
+import_test <- read_csv2("datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv")
+```
+
+```{r}
+glimpse(import_test)
+```
+
+Well, I haven't figured out a way to store column data types when exporting to CSV (if that's even possible).  So, we will need to reconvert to the correct data types for each column.
+
+```{r}
+import_test <- import_test %>% mutate_if(is.character, as.factor)
+```
+
+```{r}
+import_test <- import_test %>% mutate(county_code = as.factor(county_code))
+import_test <- import_test %>% mutate(year = as.factor(year))
+import_test <- import_test %>% mutate(year_code = as.factor(year_code))
+```
+
+```{r}
+import_test <- import_test %>% mutate(percent_of_total_deaths = as.numeric(gsub("%", "", percent_of_total_deaths)))
+```
+
+```{r}
+import_test <- import_test %>% mutate(deaths = as.integer(deaths))
+import_test <- import_test %>% mutate(population = as.integer(population))
+```
+
+```{r}
+glimpse(import_test)
+```
+
+```{r}
+head(import_test)
+```
+
+And everything looks good.
+
+___
