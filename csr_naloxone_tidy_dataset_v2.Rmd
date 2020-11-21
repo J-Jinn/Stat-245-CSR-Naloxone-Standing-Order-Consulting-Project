@@ -135,6 +135,14 @@ head(data_drug, 5)
 tail(data_drug, 5)
 ```
 
+Check we only have two values for "Gender" for the data_drug.
+
+```{r}
+unique(data_drug$`Gender`)
+```
+
+Now, we are set to convert to gender codes similar to the other two datasets.
+
 ___
 
 ```{r}
@@ -344,18 +352,33 @@ data <- data %>% mutate(population = as.integer(population))
 glimpse(data)
 ```
 
+
+Check if any rows has any NAs in their columns.
+
+```{r}
+data <- na.omit(data)
+```
+
+```{r}
+nrow(data)
+```
+
+And no, so we can keep every single observation.
+
+___
+
 Ok, things are looking good now.
 
 But, we should also export out our cleaned and combined dataset to a CSV file for future use.
 
 ```{r}
-# write.csv2(data,"datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv", append = FALSE, row.names = FALSE)
+write.csv2(data,"datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.csv", append = FALSE, row.names = FALSE)
 ```
 
 And test we can read everything back in correctly.
 
 ```{r}
-import_test <- read_csv2("datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathDates9decimalsPer1k_TIDY.csv")
+import_test <- read_csv2("datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.csv")
 ```
 
 ```{r}
@@ -363,6 +386,8 @@ glimpse(import_test)
 ```
 
 Well, I haven't figured out a way to store column data types when exporting to CSV (if that's even possible).  So, we will need to reconvert to the correct data types for each column.
+
+**Update: Thanks to instructor feedback, also saving as a RDS file type to preserve column data types.**
 
 ```{r}
 import_test <- import_test %>% mutate_if(is.character, as.factor)
@@ -394,3 +419,55 @@ head(import_test)
 And everything looks good.
 
 ___
+
+### RDS file-type to preserve column data types.
+
+Save to RDS file-type.
+
+```{r}
+saveRDS(data, file = "datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+Read from RDS file-type.
+
+```{r}
+rds_data <- readRDS(file = "datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+```{r}
+glimpse(rds_data)
+```
+
+```{r}
+head(rds_data)
+```
+
+Yep, it seems this file format preserves existing column data types.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1571 @@
+---
+title: "CSR Naloxone Standing Order Project - Draft Model(s)"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+  html_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr)
+require(readr)
+require(ggeffects)
+require(mgcv)
+# require(reticulate) # Utilize Python programming language.
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+# remotes::install_github('ProjectMOSAIC/ggformula')
+```
+
+UPDATE: Current models still failing.
+_______________________________________________________________________________________________
+
+### **Instructor Feedback**
+
+In the cleaning operations, you have to be a little careful with your case_when()s -- when you use TRUE for the RHS of the second/last option, then if there are any NAs in the original data they will be assigned that value. You probably want them to stay NAs.
+
+**Confirmed we had no NAs for "Gender" in data_drug before converting "Gender Code".  Full dataset also has no observations with NA values in any columns.**
+
+I agree that it will be useful to work as soon as you are able on making a cleaner version of your document -- with enough comments to understand what is being done to the data, but not recording every double check and glimpse(), head(), tail(), count() etc. so that you have something that is more concise, easy to follow, and closer to what you would be able to share with a partner.
+
+**In-progress.**
+
+If you have a variable year and also year_code, you don't really need to tidy/keep/use both; one is OK.
+
+**Will keep in full dataset, can be dropped during analysis.**
+
+If you are saving your tidied dataset for later reading in/use, it might make sense to store it as an RDS file rather than writing a CSV. It will be a bit faster to read in, and will preserve your variable types. saveRDS() creates the file and readRDS() reads it back in. See: https://fromthebottomoftheheap.net/2012/04/01/saving-and-loading-r-objects/
+
+**Implemented.**
+
+As you continue to move forward, you will also have to curate your graphics carefully. It's great that you have looked at all the variables and made a lot of plots to get familiar with the data, but in the end, what you need is graphs that specifically help to answer your research questions. You will have to think about what and how to create graphics that actually do that (and then work to interpret the patterns you see in them).
+
+**In-progress.  Revising EDAs.**
+
+I don't know if it makes sense to remove county from your models, since I think that was one of the bigger questions of interest -- not to make models for all of Michigan, but for Kent County, in comparison with a specific, small set of other counties. So another solution is that you could filter the data to only those counties of interest and then include county in the model much more "cheaply" in terms of parameters to estimate.
+
+**Will consider this as a subset of the first research question.  But first, consider all counties and get model(s) without assessment issues when checking model conditions.**
+
+Also, you need to think about how you are computing sample size and fitting your models. Is the response count data? If so, you have WAY more than one observation per row and can potentially afford many quite a few predictors.
+
+**Didn't think about this.  Thanks for the clarification.  Will proceed with this in mind.**
+
+Also in the model planning phase -- do you not want to model deaths per capita? In other words, shouldn't population be an offset rather than a predictor?
+
+**I think I forgot to include it in the initial draft model for some reason.  Oops.**
+
+Do you want to consider interactions between any of the predictors and County, particularly the Year? To see if the time-trend is different between counties?  Speaking of the time-trend, I wonder if it would make sense to use either a smooth or a linear term because there are so many years in the dataset. Any other interactions? (Gender and Age? Gender and Race? Based on your background/context exploration do you have any ideas of what has been found in the past or would make sense?)
+
+**Will include all reasonable interactions in this revised draft.**
+
+I don't exactly understand what the percent_total_deaths variable is and why it makes sense to include here as a predictor. I feel suspicious of it - can you convince me?
+
+**percent_of_total_deaths IS deaths per capita: deaths / population * 100%.**  
+
+Overall, the goal this time was to ensure your dataset was prepped for modelling and to get started, planning and fitting a model and starting to explore how well it worked. You have certainly met that milestone so now I look forward to continuing to work with you as your refine and keep moving forward!
+
+**Yep, really hope we can get some decent models out of this dataset.**
+
+Also well done conquering the WONDER data portal and getting the data set that you wanted.
+
+**Took way too long to do so.  Thanks for the help on this.**
+
+Once you have addressed this feedback, if you haven't already, it's definitely worth checking in with Laura about the way you have your dataset set up and the models you are fitting (just what the response variable and predictors are, not necessarily all the gritty details) to make sure it matches with her vision and goals for the work you are doing.
+
+**We should.  We only met with her that one time.**
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+### RDS file-type to preserve column data types.
+
+Save to RDS file-type.
+
+```{r}
+# saveRDS(data, file = "datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+Import data from RDS file-type instead of CSV for preserved column data types.
+
+```{r}
+data <- readRDS(file = "datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+head(data)
+```
+
+Drop any redundant and "useless" columns (i.e. "code" versions, "crude_rate", and CIs)
+
+```{r}
+data <- data %>% select(-c(gender_code, race_code, year_code, ten_year_age_groups_code, county_code, crude_rate,
+                           crude_rate_lower_95percent_confidence_interval,
+                           crude_rate_upper_95percent_confidence_interval,
+                           crude_rate_standard_error))
+```
+
+```{r}
+glimpse(data)
+```
+
+Ok, we now only include the "useful" columns for analysis.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Model Fitting (first research question).
+
+Response: "deaths" - count data.
+
+Model type: negative binomial, poisson, and GAM
+
+First, filter by only "drug" related deaths as that is what we are concerned with for this question.
+
+```{r}
+drug_data <- data %>% filter(data$cause_of_death == "drug")
+```
+
+```{r}
+glimpse(drug_data)
+```
+
+Compute the rule of thumb for maximum number of parameters:
+
+```{r}
+nrow(drug_data) / 15
+```
+
+So, we can have about 45 parameters at most in our model.  But, per instructor feedback, we do have more than "one observation" per row as this is count data on "deaths" for the specified values of the other variables.
+
+```{r}
+length(levels(drug_data$gender)) - 1 + length(levels(drug_data$race)) - 1 + 
+  length(levels(drug_data$year)) - 1 + length(levels(drug_data$ten_year_age_groups)) - 1 + 
+  length(levels(drug_data$county)) - 1 + 1 + 1 + 1 # 1 each for population, residuals, intercept
+```
+
+Including "County" as a regular predictor will yield 117 total # of parameters to estimate (if we keep everything as a regular predictor and no interactions/random effects/smooths).
+
+```{r}
+length(levels(drug_data$gender)) - 1 + length(levels(drug_data$race)) - 1 + 
+  length(levels(drug_data$year)) - 1 + length(levels(drug_data$ten_year_age_groups)) - 1 + 
+  1 + 1 + 1 # 1 each for population, residuals, intercept.
+```
+
+Since we're using a GAM, we'll have to convert "year" back to a quantitative variable.
+
+```{r}
+drug_data <- drug_data %>% mutate(year_numeric = as.numeric(as.character(year)))
+```
+
+```{r}
+glimpse(drug_data)
+```
+
+_______________________________________________________________________________________________
+
+#### Without offset(population)
+
+Note to self: Use offset(log(predictor)) if link = "log", otherwise error.
+
+```{r}
+# gam_negbin_model <- bam(deaths ~ gender + race + county + ten_year_age_groups + population +
+#                           s(year_numeric,  by = county, bs = "cs", k = 10) +  
+#                           gender*ten_year_age_groups + gender*population + gender*race + 
+#                           race*population + population*ten_year_age_groups,
+#                         data = drug_data, select = TRUE, method = "ML", nthreads = 6, discrete = TRUE,
+#                         control = gam.control(),
+#                         family = negbin(link = "log", theta = 1))
+```
+
+```{r}
+# saveRDS(gam_negbin_model, file = "datasets\\joseph_jinn_queries\\gam_negbin_model.rds")
+```
+
+Read from RDS file-type.
+
+```{r}
+gam_negbin_model <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_negbin_model.rds")
+```
+
+```{r}
+summary(gam_negbin_model)
+```
+
+```{r}
+# gam_poisson_model <- bam(deaths ~ gender + race + county + ten_year_age_groups + population +
+#                           s(year_numeric,  by = county, bs = "cs", k = 10) +  
+#                           gender*ten_year_age_groups + gender*population + gender*race + 
+#                           race*population + population*ten_year_age_groups,
+#                         data = drug_data, select = TRUE, method = "ML", nthreads = 6, discrete = TRUE,
+#                         control = gam.control(),
+#                          family = poisson(link = "log"))
+```
+
+
+```{r}
+# saveRDS(gam_poisson_model, file = "datasets\\joseph_jinn_queries\\gam_poisson_model.rds")
+```
+
+Read from RDS file-type.
+
+```{r}
+gam_poisson_model <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_poisson_model.rds")
+```
+
+```{r}
+summary(gam_poisson_model)
+```
+
+```{r}
+nbinom1_model <- glm(deaths ~ gender + race + county + ten_year_age_groups + population +
+                       gender*ten_year_age_groups + gender*population + gender*race + 
+                       race*population + population*ten_year_age_groups,
+                     data = drug_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                     control = glm.control(),
+                     family = nbinom1(link = "log"))
+```
+
+```{r}
+summary(nbinom1_model)
+```
+
+```{r}
+nbinom2_model <- glm(deaths ~ gender + race + county + ten_year_age_groups + population +
+                       gender*ten_year_age_groups + gender*population + gender*race + 
+                       race*population + population*ten_year_age_groups,
+                     data = drug_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                     control = glm.control(),
+                     family = nbinom2(link = "log"))
+```
+
+```{r}
+summary(nbinom2_model)
+```
+
+```{r}
+poisson_model <- glm(deaths ~ gender + race + county + ten_year_age_groups + population +
+                       gender*ten_year_age_groups + gender*population + gender*race + 
+                       race*population + population*ten_year_age_groups,
+                     data = drug_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                     control = glm.control(),
+                     family = poisson(link = "log"))
+```
+
+```{r}
+summary(poisson_model)
+```
+_______________________________________________________________________________________________
+
+#### With offset(population)
+
+```{r}
+# gam_negbin_offset_model <- bam(deaths ~ gender + race + county + ten_year_age_groups + offset(log(population)) +
+#                                  s(year_numeric,  by = county, bs = "cs", k = 10) +
+#                                  gender*ten_year_age_groups + gender*race,
+#                                data = drug_data, select = TRUE, method = "ML", nthreads = 6, discrete = TRUE,
+#                                control = gam.control(),
+#                                family = negbin(link = "log", theta = 1))
+```
+
+```{r}
+# saveRDS(gam_negbin_model, file = "datasets\\joseph_jinn_queries\\gam_negbin_offset_model.rds")
+```
+
+Read from RDS file-type.
+
+```{r}
+gam_negbin_offset_model <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_negbin_offset_model.rds")
+```
+
+```{r}
+summary(gam_negbin_offset_model)
+```
+
+```{r}
+# gam_poisson_offset_model <- bam(deaths ~ gender + race + county + ten_year_age_groups + offset(log(population)) +
+#                                    s(year_numeric,  by = county, bs = "cs", k = 10) +
+#                                    gender*ten_year_age_groups + gender*race,
+#                                  data = drug_data, select = TRUE, method = "ML", nthreads = 6, discrete = TRUE,
+#                                  control = gam.control(),
+#                                  family = poisson(link = "log"))
+```
+
+
+```{r}
+# saveRDS(gam_poisson_offset__model, file = "datasets\\joseph_jinn_queries\\gam_poisson_offset_model.rds")
+```
+
+Read from RDS file-type.
+
+```{r}
+gam_poisson_offset_model <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_poisson_offset_model.rds")
+```
+
+```{r}
+summary(gam_poisson_offset_model)
+```
+
+```{r}
+nbinom1_offset_model <- glm(deaths ~ gender + race + county + ten_year_age_groups + offset(log(population)) +
+                              gender*ten_year_age_groups + gender*race,
+                            data = drug_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                            control = glm.control(),
+                            family = nbinom1(link = "log"))
+```
+
+```{r}
+summary(nbinom1_offset_model)
+```
+
+```{r}
+nbinom2_offset_model <- glm(deaths ~ gender + race + county + ten_year_age_groups + offset(log(population)) +
+                              gender*ten_year_age_groups + gender*race,
+                            data = drug_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                            control = glm.control(),
+                            family = nbinom2(link = "log"))
+```
+
+```{r}
+summary(nbinom2_offset_model)
+```
+
+
+```{r}
+poisson_offset_model <- glm(deaths ~ gender + race + county + ten_year_age_groups + offset(log(population)) +
+                              gender*ten_year_age_groups + gender*race,
+                            data = drug_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                            control = glm.control(),
+                            family = poisson(link = "log"))
+```
+
+```{r}
+summary(poisson_offset_model)
+```
+
+_______________________________________________________________________________________________
+
+Taking a look at quantiles.
+
+```{r}
+quantile(drug_data$deaths)
+quantile(drug_data$population)
+quantile(drug_data$crude_rate_added)
+quantile(drug_data$percent_of_total_deaths)
+```
+
+Scaling predictors (deprecated):
+```{r}
+# drug_data <- drug_data %>%
+#   mutate(scaled_crude_rate_added = scale(crude_rate_added),
+#          scaled_percent_of_total_deaths = scale(percent_of_total_deaths),
+#          scaled_population = scale(population)
+#   )
+```
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Model Selection
+
+```{r}
+AIC(gam_negbin_model, gam_poisson_model, nbinom1_model, nbinom2_model, poisson_model,
+    gam_negbin_offset_model, gam_poisson_offset_model, nbinom1_offset_model,
+    nbinom2_offset_model, poisson_offset_model)
+```
+
+According to AIC/BIC, the GAM Poisson models are the best.
+
+```{r}
+BIC(gam_negbin_model, gam_poisson_model, nbinom1_model, nbinom2_model, poisson_model,
+    gam_negbin_offset_model, gam_poisson_offset_model, nbinom1_offset_model,
+    nbinom2_offset_model, poisson_offset_model)
+```
+
+Let's take a quick look at ACF's to see which models fail miserably at independence of residuals.
+
+```{r}
+gf_acf(~gam_negbin_model)
+gf_acf(~gam_poisson_model)
+gf_acf(~nbinom1_model)
+gf_acf(~nbinom2_model)
+gf_acf(~poisson_model)
+gf_acf(~gam_negbin_offset_model)
+gf_acf(~gam_poisson_offset_model)
+gf_acf(~nbinom1_offset_model)
+gf_acf(~nbinom2_offset_model)
+gf_acf(~poisson_offset_model)
+```
+
+
+So, gam_negbin_model, gam_poisson_model, gam_negbin_offset_model, gam_poisson_offset_model don't look too bad.  The others either show nothing or are terrible.
+
+So, we'll go with either the GAM Poisson model with/without population as an offset.  Let's look at DHARMa plots for them.
+
+
+```{r}
+gam_poisson_model_sim <- simulateResiduals(gam_poisson_model, n = 1000)
+```
+
+```{r}
+gf_point(gam_poisson_model_sim$scaledResiduals ~ fitted(gam_poisson_model)) %>%
+  gf_labs(x = "Predicted Number of Deaths",
+          y = 'Scaled Residuals')
+```
+
+While this isn't a uniform distribution, we are using GAMs so we don't need to worry about the linearity condition.  Mean-variance could have minor issues as there are minor concentrations of dots towards the top and bottom compared to the middle but overall everything still looks decently spread out.
+
+```{r}
+gam_poisson_offset_model_sim <- simulateResiduals(gam_poisson_offset_model, n = 1000)
+```
+
+```{r}
+gf_point(gam_poisson_offset_model_sim$scaledResiduals ~ fitted(gam_poisson_offset_model)) %>%
+  gf_labs(x = "Predicted Number of Deaths",
+          y = 'Scaled Residuals')
+```
+
+Since the gam_poisson_model_sim has the lowest AIC/BIC, we will use that for now.
+
+Skipping dredge() as it will take a long time to run.
+
+```{r}
+# gam_poisson_model_na.fail <- update(gam_poisson_model, na.action="na.fail")
+```
+
+```{r}
+# gam_poisson_model_na.fail_dredge_results <- head(dredge(gam_poisson_model_na.fail, 10))
+```
+
+```{r}
+# gam_poisson_model_na.fail_dredge_results
+```
+
+_______________________________________________________________________________________________
+
+Placeholder for dredge results.
+_______________________________________________________________________________________________
+
+```{r}
+anova(gam_poisson_model)
+```
+
+anova() suggests dropping the gender*population interaction and keeping the other predictors.  We definitely have relevant smoothing terms as evidenced by some "edf" values approaching "Ref.df" values.
+
+```{r}
+# drop1(gam_poisson_model, k = 2)
+```
+
+```{r}
+# drop1(gam_poisson_model, k = log(nrow(drug_data)))
+```
+
+Apparently, drop1() does not function with GAMs.
+
+```{r}
+# Anova(gam_poisson_model)
+```
+
+Ditto for Anova().
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Model Assessment
+
+```{r}
+overdisp_fun(gam_poisson_model)
+```
+
+Over-dispersion looks good as it's around 2-3 units.
+
+```{r}
+gf_acf(~gam_poisson_model)
+```
+
+```{r}
+gf_acf(~gam_poisson_model) %>% gf_lims(y = c(-0.2, 0.2), x = c(0, 30))
+```
+
+We have some issues with independence of residuals at 5 of the lags.  This doesn't look terrible though.
+
+
+```{r}
+gam_poisson_model_sim <- simulateResiduals(gam_poisson_model, n = 1000)
+```
+
+```{r}
+gf_point(gam_poisson_model_sim$scaledResiduals ~ fitted(gam_poisson_model)) %>%
+  gf_labs(x = "Predicted Number of Deaths",
+          y = 'Scaled Residuals')
+```
+
+This isn't quite a uniform distribution.  We could have some mean-variance issues but nothing that looks particularly terrible  Since we're fitting a GAM and using a smoothing term, we don't need to check for linearity.
+
+SKpping checking log(response variable) vs. predictors and scaled residuals vs. predictors.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Prediction plots.
+
+```{r}
+ggpredict(gam_poisson_model)
+```
+
+Well, unlike the previous iteration we are actually getting finite values instead of "Inf", so that's good.
+
+```{r}
+t(get_fixed(gam_poisson_model)) %>% pander()
+```
+
+```{r}
+get_fixed(gam_poisson_model)
+```
+
+Fixed values for our model.
+
+_______________________________________________________________________________________________
+
+Prediction plot for "gender":
+
+And the long-winded manual way...
+
+```{r}
+# note: "chr" variables have unique() values, "fct" variables have level()s
+gender_prediction_data <- expand.grid(
+  # char_variable = pull(police_stop, char_variable) %>% unique(),
+  # quantitative_variable = seq(from = 0, to = 10000, by = 100),
+  # categorical_variable = pull(police_stop, categorical_variable) %>% factor() %>% levels(),
+  gender = pull(drug_data, gender) %>% factor() %>% levels(),
+  race = "White",
+  year_numeric = "2012",
+  county = "Wayne County, MI",
+  ten_year_age_groups = "45-54 years",
+  population = 56547.5)
+
+# compute predictions with SEs
+gender_predictions <- predict(gam_poisson_model, 
+                              newdata = gender_prediction_data,
+                              type = 'response', se.fit = TRUE)
+
+glimpse(gender_predictions)
+```
+
+```{r}
+# add predicted values and CIs to the hypothetical dataset
+gender_prediction_data <- gender_prediction_data %>%
+  mutate(predictions = gender_predictions$fit,
+         CI_low = gender_predictions$fit - 1.96 * gender_predictions$se.fit,
+         CI_hi = gender_predictions$fit + 1.96 * gender_predictions$se.fit)
+```
+
+```{r}
+gf_point(predictions ~ gender, data = gender_prediction_data,
+         alpha = 1.0, color = "black",
+         ylab="Predicted (fitted) Values of Deaths",
+         xlab="Gender",
+         title="CDC Wonder Data - Prediction Plot",
+         subtitle = "",
+         caption = ""
+) %>%
+  # gf_ribbon(CI_low + CI_hi ~ single_year_ages_factor) %>%
+  gf_errorbar(CI_low + CI_hi ~ gender)
+```
+
+**FIXME: manual method is broken at the moment (well, probably doesn't work since we're using a GAM).  Using ggpredict() instead.**
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'gender',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(gam_poisson_model, "gender")
+```
+
+Prediction plot for "race":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'race',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(gam_poisson_model, "race")
+```
+
+Prediction plot for "county":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'county',
+          type = 'fixed') %>% plot() + coord_flip()
+```
+
+```{r}
+pred_plot(gam_poisson_model, "county") + coord_flip()
+```
+
+Prediction plot for "ten_year_age_groups":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'ten_year_age_groups',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(gam_poisson_model, "ten_year_age_groups")
+```
+
+Prediction plot for "population":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'population',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(gam_poisson_model, "population")
+```
+
+Prediction plot for "year_numeric":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'year_numeric',
+          type = 'fixed') %>% plot()
+```
+
+Ok, ggpredict() doesn't seem to work with GAMS for the smooth terms.
+
+```{r}
+pred_plot(gam_poisson_model, "year_numeric")
+```
+
+#### Prediction plots for interactions.
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('gender', 'ten_year_age_groups'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(gam_poisson_model, "population")
+```
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('gender', 'population'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(gam_poisson_model, "population")
+```
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('gender', 'race'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(gam_poisson_model, "population")
+```
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('race', 'population'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(gam_poisson_model, "population")
+```
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('population', 'ten_year_age_groups'),
+          type = 'fixed') %>% plot()
+```
+
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Model fitting (3rd research question)
+
+Response: "drug_death" - binary response ("yes" = 1, "no" = 0 for drug-related death).
+
+Model type: logistic regression and GAM
+
+Convert "cause_of_death" to a binary response variable in preparation for logistic regression modeling.
+
+```{r}
+unique(data$cause_of_death)
+```
+
+Convert to binary response and store in new variable.
+
+```{r}
+all_data <- data %>% mutate(drug_death = case_when(
+  cause_of_death == "drug" ~ "yes",
+  TRUE ~ "no"))
+```
+
+Convert response to a factor.
+
+```{r}
+all_data <- all_data %>% mutate(drug_death = as.factor(drug_death))
+```
+
+```{r}
+all_data <- all_data %>% mutate(drug_death = fct_relevel(drug_death, c("no", "yes")))
+```
+
+```{r}
+levels(all_data$drug_death)
+```
+
+```{r}
+glimpse(all_data)
+```
+
+Since we're using a GAM, we'll have to convert "year" back to a quantitative variable.
+
+```{r}
+all_data <- all_data %>% mutate(year_numeric = as.numeric(as.character(year)))
+```
+
+```{r}
+glimpse(drug_data)
+```
+
+And seems like we're good to go.
+
+Adjustment of Rule of Thumb for # of parameters for logistic (binary) regression:
+
+```{r}
+p <- min(sum(all_data$drug_death == 'yes'), 
+         sum(all_data$drug_death == 'no'))
+p
+p / 15
+```
+
+With the # of successes in the dataset, we can have up to about 45 parameters max.
+
+Compute # of parameters used in model (1 for each quantitative, levels - 1 for each categorical, 1 each for intercept/sigma; assuming no interactions/random effects/smooths).
+
+```{r}
+length(levels(drug_data$gender)) - 1 + length(levels(drug_data$race)) - 1 + 
+  length(levels(drug_data$year)) - 1 + length(levels(drug_data$ten_year_age_groups)) - 1 + 
+  length(levels(drug_data$county)) - 1 + 1 + 1 + 1 + 1 # 1 each for population, deaths, residuals, intercept
+```
+
+```{r}
+sum(all_data$drug_death == "yes")
+sum(all_data$drug_death == "no")
+```
+
+We have far more non-drug death related data.
+
+We can now include deaths as a predictor too.
+
+Should I give up on this model?  Takes too long to run...over half an hour now (might just let it run overnight).
+
+```{r}
+# gam_binomial_model <- bam(drug_death ~ gender + race + county + s(year_numeric,  by = county, bs = "cs", k = 10) +
+#                             ten_year_age_groups + deaths +
+#                             gender*race + gender*ten_year_age_groups + race*ten_year_age_groups,
+#                           data = all_data, select = TRUE, method = "ML", nthreads = 6, discrete = TRUE,
+#                           control = gam.control(),
+#                           family = binomial(link = "logit"))
+```
+
+and I'm going to save this model to a RDS file if it ever finishes....
+
+Save to RDS file-type.
+
+[RDS](https://fromthebottomoftheheap.net/2012/04/01/saving-and-loading-r-objects/)
+
+```{r}
+# saveRDS(gam_binomial_model, file = "datasets\\joseph_jinn_queries\\gam_binomial_model.rds")
+```
+
+Read from RDS file-type.
+
+```{r}
+gam_binomial_model <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_binomial_model.rds")
+```
+
+```{r}
+summary(gam_binomial_model)
+```
+
+___
+
+```{r}
+# gam_binomial_model2 <- bam(drug_death ~ gender + race + county + s(year_numeric,  by = county, bs = "cs", k = 10) +
+#                              ten_year_age_groups + deaths +
+#                              gender*race + gender*ten_year_age_groups,
+#                            data = all_data, select = TRUE, method = "ML", nthreads=6,
+#                            control = gam.control(),
+#                            family = binomial(link = "logit"))
+```
+
+```{r}
+# saveRDS(gam_binomial_model2, file = "datasets\\joseph_jinn_queries\\gam_binomial_model2.rds")
+```
+
+```{r}
+gam_binomial_model2 <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_binomial_model2.rds")
+```
+
+```{r}
+summary(gam_binomial_model2)
+```
+
+___
+
+Considering the hours it took to run gam_binomial_model4, I'm going to skip running this one as I don't think removing by = county will make a drastic difference in the results.
+
+```{r}
+# gam_binomial_model3 <- bam(drug_death ~ gender + race + county + s(year_numeric, bs = "cs", k = 10) +
+#                              ten_year_age_groups + deaths + population +
+#                              gender*deaths + gender*ten_year_age_groups + gender*population + 
+#                              gender*race + race*deaths + race*population + 
+#                              deaths*population + population*ten_year_age_groups + 
+#                              deaths*ten_year_age_groups,
+#                            data = all_data, select = TRUE, method = "ML", nthreads = 6,
+#                            control = gam.control(),
+#                            family = binomial(link = "logit"))
+```
+
+```{r}
+# summary(gam_binomial_model3)
+```
+
+```{r}
+# saveRDS(gam_binomial_model3, file = "datasets\\joseph_jinn_queries\\gam_binomial_model3.rds")
+```
+
+```{r}
+# rds_data <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_binomial_model3.rds")
+```
+
+___
+
+```{r}
+# gam_binomial_model4 <- bam(drug_death ~ gender + race + county + s(year_numeric,  by=county, bs = "cs", k=10) +
+#                              ten_year_age_groups + deaths + population +
+#                              gender*deaths + gender*ten_year_age_groups + gender*population + 
+#                              gender*race + race*deaths + race*population + 
+#                              deaths*population + population*ten_year_age_groups + 
+#                              deaths*ten_year_age_groups,
+#                            data = all_data, select = TRUE, method = "ML", nthreads = 6,
+#                            control = gam.control(),
+#                            family = binomial(link = "logit"))
+```
+
+```{r}
+# saveRDS(gam_binomial_model4, file = "datasets\\joseph_jinn_queries\\gam_binomial_model4.rds")
+```
+
+```{r}
+gam_binomial_model4 <- readRDS(file = "datasets\\joseph_jinn_queries\\gam_binomial_model4.rds")
+```
+
+```{r}
+summary(gam_binomial_model4)
+```
+
+___
+
+```{r}
+binomial_model <- glm(drug_death ~ gender + race + county + year + 
+                        ten_year_age_groups + deaths + population +
+                        gender*race + gender*ten_year_age_groups + race*ten_year_age_groups,
+                      data = all_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                      control = glm.control(),
+                      family = binomial(link = "logit"))
+```
+
+```{r}
+summary(binomial_model)
+```
+
+___
+
+```{r}
+binomial_model2 <- glm(drug_death ~ gender + race + county + year + 
+                         ten_year_age_groups + deaths + population +
+                         gender*race + gender*ten_year_age_groups,
+                       data = all_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                       control = glm.control(),
+                       family = binomial(link = "logit"))
+```
+
+```{r}
+summary(binomial_model2)
+```
+
+
+```{r}
+binomial_model3 <- glm(drug_death ~ gender + race + county + year +
+                         ten_year_age_groups + deaths + population +
+                         gender*deaths + gender*ten_year_age_groups + gender*population + 
+                         gender*race + race*deaths + race*population + 
+                         deaths*population + population*ten_year_age_groups + 
+                         deaths*ten_year_age_groups,
+                       data = all_data, select = TRUE, nthreads = 6, discrete = TRUE,
+                       control = glm.control(),
+                       family = binomial(link = "logit"))
+```
+
+```{r}
+summary(binomial_model3)
+```
+
+Let's take a quick look at ACF's to see which models fail miserably at independence of residuals.
+
+```{r}
+gf_acf(~gam_binomial_model)
+gf_acf(~gam_binomial_model2)
+gf_acf(~gam_binomial_model4)
+gf_acf(~binomial_model)
+gf_acf(~binomial_model2)
+gf_acf(~binomial_model3)
+```
+
+ACF looks terrible for all of our models across the board.  The best-looking ACF is the binomial_model.
+
+_______________________________________________________________________________________________
+
+
+```{r}
+# gam_binomial_model_sim <- simulateResiduals(gam_binomial_model)
+```
+
+```{r}
+# gf_point(gam_binomial_model_sim$scaledResiduals ~ fitted(gam_binomial_model)) %>%
+#   gf_labs(x = "Predicted probability of 'drug' death",
+#           y = 'Scaled Residuals')
+```
+
+```{r}
+# gam_binomial_model2_sim <- simulateResiduals(gam_binomial_model2)
+```
+
+```{r}
+# gf_point(gam_binomial_model2_sim$scaledResiduals ~ fitted(gam_binomial_model2)) %>%
+#   gf_labs(x = "Predicted probability of 'drug' death",
+#           y = 'Scaled Residuals')
+```
+
+```{r}
+# gam_binomial_model4_sim <- simulateResiduals(gam_binomial_model4)
+```
+
+```{r}
+# gf_point(gam_binomial_model4_sim$scaledResiduals ~ fitted(gam_binomial_model4)) %>%
+#   gf_labs(x = "Predicted probability of 'drug' death",
+#           y = 'Scaled Residuals')
+```
+
+Simulating residuals is currently failing for the GAM binomial models.
+
+_______________________________________________________________________________________________
+
+```{r}
+# binomial_model_na.fail <- update(binomial_model, na.action = "na.fail")
+```
+
+```{r}
+# binomial_model_model_sim <- simulateResiduals(binomial_model_na.fail, n = 1000)
+```
+
+The above fails as we have numerous NAs in our model coefficients.
+
+```{r}
+# gf_point(binomial_model_model_sim$scaledResiduals ~ fitted(binomial_model_na.fail)) %>%
+#   gf_labs(x = "Predicted probability of 'drug' death",
+#           y = 'Scaled Residuals')
+```
+
+```{r}
+binomial_model_model2_sim <- simulateResiduals(binomial_model2, n = 1000)
+```
+
+```{r}
+gf_point(binomial_model_model2_sim$scaledResiduals ~ fitted(binomial_model2)) %>%
+  gf_labs(x = "Predicted probability of 'drug' death",
+          y = 'Scaled Residuals')
+```
+
+```{r}
+binomial_model_model3_sim <- simulateResiduals(binomial_model3, n = 1000)
+```
+
+```{r}
+gf_point(binomial_model_model3_sim$scaledResiduals ~ fitted(binomial_model3)) %>%
+  gf_labs(x = "Predicted probability of 'drug' death",
+          y = 'Scaled Residuals')
+```
+
+
+DHARMA plots look like a uniform distribution for the non-GAM binomial models we were able to make plots for.
+
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+#### Model Selection
+
+```{r}
+AIC(gam_binomial_model, gam_binomial_model2, gam_binomial_model4, 
+    binomial_model, binomial_model2, binomial_model3)
+```
+
+```{r}
+BIC(gam_binomial_model, gam_binomial_model2, gam_binomial_model4, 
+    binomial_model, binomial_model2, binomial_model3)
+```
+
+Based on AIC/BIC, we'll go with our non-GAM binomial model 3.
+
+Skipping dredge() as it will take a long time to run.
+
+```{r}
+# gam_poisson_model_na.fail <- update(gam_poisson_model, na.action="na.fail")
+```
+
+```{r}
+# gam_poisson_model_na.fail_dredge_results <- head(dredge(gam_poisson_model_na.fail, 10))
+```
+
+```{r}
+# gam_poisson_model_na.fail_dredge_results
+```
+
+_______________________________________________________________________________________________
+
+Placeholder for dredge results.
+_______________________________________________________________________________________________
+
+```{r}
+# anova(binomial_model3)
+```
+
+Skipping anova() as we're not using a GAM model.
+
+```{r}
+# drop1(binomial_model3, k = 2)
+```
+
+Single term deletions
+
+Model:
+drug_death ~ gender + race + county + year + ten_year_age_groups + 
+    deaths + population + gender * deaths + gender * ten_year_age_groups + 
+    gender * population + gender * race + race * deaths + race * 
+    population + deaths * population + population * ten_year_age_groups + 
+    deaths * ten_year_age_groups
+                               Df Deviance     AIC
+<none>                              1568.5  1886.5
+county                         81   1957.2  2113.2
+year                           19   1751.3  2031.3
+gender:deaths                   1   1615.8  1931.8
+gender:ten_year_age_groups     10   1735.4  2033.4
+gender:population               1   1584.3  1900.3
+gender:race                     3   1570.3  1882.3
+race:deaths                     3   1606.7  1918.7
+race:population                 3   1671.8  1983.8
+deaths:population               1   1651.9  1967.9
+ten_year_age_groups:population 10  28618.7 28916.7
+ten_year_age_groups:deaths     10   1735.7  2033.7
+
+**Takes a while to run these functions on a dataset of this size, so copy/pasting results here.**
+
+According to AIC, we should consider dropping "gender*race" only.
+
+```{r}
+# drop1(binomial_model3, k = log(nrow(all_data)))
+```
+
+Single term deletions
+
+Model:
+drug_death ~ gender + race + county + year + ten_year_age_groups + 
+    deaths + population + gender * deaths + gender * ten_year_age_groups + 
+    gender * population + gender * race + race * deaths + race * 
+    population + deaths * population + population * ten_year_age_groups + 
+    deaths * ten_year_age_groups
+                               Df Deviance     AIC
+<none>                              1568.5  3140.2
+county                         81   1957.2  2728.2
+year                           19   1751.3  3135.2
+gender:deaths                   1   1615.8  3177.6
+gender:ten_year_age_groups     10   1735.4  3208.3
+gender:population               1   1584.3  3146.2
+gender:race                     3   1570.3  3112.4
+race:deaths                     3   1606.7  3148.8
+race:population                 3   1671.8  3213.9
+deaths:population               1   1651.9  3213.7
+ten_year_age_groups:population 10  28618.7 30091.5
+ten_year_age_groups:deaths     10   1735.7  3208.5
+
+According to BIC, we should consider dropping "county", "year", and "gender*race".
+
+```{r}
+# Anova(binomial_model3)
+```
+
+Analysis of Deviance Table (Type II tests)
+
+Response: drug_death
+                               LR Chisq Df Pr(>Chisq)    
+gender                             80.8  1  < 2.2e-16 ***
+race                               20.2  3   0.000152 ***
+county                            388.7 81  < 2.2e-16 ***
+year                              182.8 19  < 2.2e-16 ***
+ten_year_age_groups               373.5 10  < 2.2e-16 ***
+deaths                            883.8  1  < 2.2e-16 ***
+population                         48.3  1  3.674e-12 ***
+gender:deaths                      47.3  1  6.128e-12 ***
+gender:ten_year_age_groups        166.9 10  < 2.2e-16 ***
+gender:population                  15.9  1  6.774e-05 ***
+gender:race                         1.8  3   0.604558    
+race:deaths                        38.3  3  2.490e-08 ***
+race:population                   103.4  3  < 2.2e-16 ***
+deaths:population                  83.4  1  < 2.2e-16 ***
+ten_year_age_groups:population  27050.2 10  < 2.2e-16 ***
+ten_year_age_groups:deaths        167.2 10  < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+According to Anova(), we should drop "gender*race" only.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+**And these confints() are failing to run at the moment.**
+
+Confidence intervals for the log(odds-ratio).
+
+```{r}
+# model_CIs <- confint(binomial_model3)
+```
+
+```{r}
+# model_CIs
+```
+
+So, all the predictors/parameters whose estimate crosses through 0 could have no relationship with the response variable (takes a while to run this function).
+
+**Note: Takes too long to run, so not going to bother as it's not really that important to see the CIs.**
+
+Confidence intervals for the odds-ratio.
+
+```{r}
+# exp(binomial_model3)
+```
+
+So, all the predictors/parameters whose estimate crosses through 1 could have no relationship with the response variable.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Model Assessment
+
+According to Week 7 slides on Binary Regression...
+
+* Response variable is logical (data can be proportion but not binary!)
+* Linearity: logit(p) should have a linear relationship with each predictor variable. (A bit hard to check - can bin predictor and then plot scatter plot)
+* Independence of Residuals: Same as usual.
+* Mean-variance relationship: scaled residuals have uniform distribution and no trends.
+* NO distributional assumptions about residuals.
+
+___
+
+Our response variable "drug_death" is logical (since I made it so).  So, this check passes with flying colors.
+
+___
+
+Auto-Correlation Plots:
+
+```{r}
+gf_acf(~binomial_model3)
+```
+
+```{r}
+gf_acf(~binomial_model3) %>% gf_lims(y=c(-0.1, 0.85))
+```
+
+Yep, we miserably fail with independence of residuals.  There were a lot of predictors in the dataset that we didn't include with our aggregate dataset as that would have involved many individual separate sub-datasets that needed to be queried and joined with exponential growth in the number of queries required per additional predictor we wanted to keep.
+
+DHARMa package scaled residuals versus fitted (predicted) plot:
+
+```{r}
+binomial_model_model3_sim <- simulateResiduals(binomial_model3, n = 1000)
+```
+
+```{r}
+gf_point(binomial_model_model3_sim$scaledResiduals ~ fitted(binomial_model3)) %>%
+  gf_labs(x = "Predicted probability of 'drug' death",
+          y = 'Scaled Residuals')
+```
+
+Surprisngly, looks like trend-less uniform distribution so we are set for the mean-variance relationship and linearity check.
+
+_______________________________________________________________________________________________
+
+#### Plot each quantitative predictor binned against the response.
+
+Code in the section below just checks that we are binning correctly and does some other prep in preparation for the linearity check plots.
+
+```{r}
+all_data_binned <- all_data %>%
+  mutate(binned_deaths = cut_number(deaths, 10)) 
+```
+
+```{r}
+all_data_binned_levels <- unique(all_data_binned$binned_deaths)
+all_data_binned_levels
+all_data_binned_observations = c()
+```
+
+```{r}
+for (element in all_data_binned_levels) {
+  print(element)
+  value <- nrow(filter(all_data_binned, binned_deaths == element))
+  print(value)
+  all_data_binned_observations <- append(all_data_binned_observations, value)
+}
+print(all_data_binned_observations)
+all_data_binned_observations <- c()
+```
+
+Bins look pretty good in terms of the number of available observations in each bin.
+
+```{r}
+median(all_data$deaths)
+class(median(all_data$deaths))
+```
+
+```{r}
+prop(all_data$drug_death == "yes")
+class(prop(all_data$drug_death == "yes"))
+```
+
+```{r}
+glimpse(all_data_binned)
+```
+
+```{r}
+all_data_grouped <- all_data %>%
+  mutate(binned_deaths = cut_number(deaths, 10)) %>%
+  group_by(binned_deaths) %>%
+  summarize(proportion_drug_deaths = prop(drug_death == "yes"),
+            median_deaths = median(deaths))
+```
+
+```{r}
+head(all_data_grouped, 5)
+```
+
+```{r}
+gf_point(proportion_drug_deaths ~ median_deaths, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'deaths' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+```{r}
+gf_point(logit(proportion_drug_deaths) ~ median_deaths, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'deaths' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+Hmm, not quite a linear relationship.
+
+_______________________________________________________________________________________________
+
+```{r}
+all_data_binned <- all_data %>%
+  mutate(binned_population = cut_number(population, 10)) 
+```
+
+```{r}
+all_data_binned_levels <- unique(all_data_binned$binned_population)
+all_data_binned_levels
+all_data_binned_observations = c()
+```
+
+```{r}
+for (element in all_data_binned_levels) {
+  print(element)
+  value <- nrow(filter(all_data_binned, binned_population == element))
+  print(value)
+  all_data_binned_observations <- append(all_data_binned_observations, value)
+}
+print(all_data_binned_observations)
+all_data_binned_observations <- c()
+```
+
+Bins look pretty good in terms of the number of available observations in each bin.
+
+```{r}
+all_data_grouped <- all_data %>%
+  mutate(binned_population = cut_number(population, 10)) %>%
+  group_by(binned_population) %>%
+  summarize(proportion_drug_deaths = prop(drug_death == "yes"),
+            median_population = median(population))
+```
+
+```{r}
+head(all_data_grouped, 5)
+```
+
+```{r}
+gf_point(proportion_drug_deaths ~ median_population, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Proportion where drug_death == 'yes'",
+         xlab="Median of 'population' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+```{r}
+gf_point(logit(proportion_drug_deaths) ~ median_population, data = all_data_grouped,
+         alpha = 1.0, color = "black",
+         ylab="Logit(Proportion) where drug_death == 'yes'",
+         xlab="Median of 'population' in each Bin",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% gf_lm()
+```
+
+Yea...
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+# Prediction plots.
+
+Get the fixed values we will be using for the plots.
+
+```{r}
+# binomial_model3_na.fail <- update(binomial_model3, na.action="na.fail")
+```
+
+```{r}
+# ggpredict(binomial_model3_na.fail)
+```
+
+I have no idea what that errors is.
+
+```{r}
+t(get_fixed(binomial_model3)) %>% pander()
+```
+
+```{r}
+get_fixed(binomial_model3)
+```
+
+Fixed values for our model.
+
+_______________________________________________________________________________________________
+
+Prediction plot for "gender":
+
+```{r}
+
+```
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = 'gender',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(binomial_model3, "gender")
+```
+
+Prediction plot for "race":
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = 'race',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(binomial_model3, "race")
+```
+
+Prediction plot for "county":
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = 'county',
+          type = 'fixed') %>% plot() + coord_flip()
+```
+
+```{r}
+pred_plot(binomial_model3, "county") + coord_flip()
+```
+
+Prediction plot for "ten_year_age_groups":
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = 'ten_year_age_groups',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(binomial_model3, "ten_year_age_groups")
+```
+
+Prediction plot for "population":
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = 'population',
+          type = 'fixed') %>% plot()
+```
+
+```{r}
+pred_plot(binomial_model3, "population")
+```
+
+Prediction plot for "year_numeric":
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = 'year_numeric',
+          type = 'fixed') %>% plot()
+```
+
+Ok, ggpredict() doesn't seem to work with GAMS for the smooth terms.
+
+```{r}
+pred_plot(binomial_model3, "year_numeric")
+```
+
+#### Prediction plots for interactions.
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = c('gender', 'ten_year_age_groups'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(binomial_model3, "population")
+```
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = c('gender', 'population'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(binomial_model3, "population")
+```
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = c('gender', 'race'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(binomial_model3, "population")
+```
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = c('race', 'population'),
+          type = 'fixed') %>% plot()
+```
+
+
+```{r}
+pred_plot(binomial_model3, "population")
+```
+
+```{r}
+ggpredict(binomial_model3, 
+          terms = c('population', 'ten_year_age_groups'),
+          type = 'fixed') %>% plot()
+```
+
+___
+___
+___
+
+
