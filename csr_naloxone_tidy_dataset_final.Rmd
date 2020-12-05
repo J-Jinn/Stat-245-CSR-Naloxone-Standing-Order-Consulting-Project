@@ -1,12 +1,13 @@
 ---
-title: "CSR Naloxone Standing Order Project - Draft Model(s)"
+title: "CSR Naloxone Standing Order Project - Tidy Dataset Final"
 author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: 
-  pdf_document:
+  html_document:
     fig_height: 8
     fig_width: 13
-  html_document:
+    toc: true
+  pdf_document:
     fig_height: 8
     fig_width: 13
 classoption: landscape
@@ -444,9 +445,17 @@ head(rds_data)
 
 Yep, it seems this file format preserves existing column data types.
 
+And drop the columns we won't be using at the moment.
 
+```{r}
+rds_data_dropped <- select(rds_data,-c("gender_code", "race_code", "year_code", "ten_year_age_groups_code", "county_code", "crude_rate", "crude_rate_lower_95percent_confidence_interval", "crude_rate_upper_95percent_confidence_interval", "crude_rate_standard_error"))
+```
 
+```{r}
+glimpse(rds_data_dropped)
+```
 
+And these are the columns/variables/predictors we will focus on.
 
 
 

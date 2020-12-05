@@ -22,6 +22,13 @@ require(ggeffects)
 
 options(max.print = 6000)
 
+# Set dummy variable choices until user uploads a file.
+dummy1 <- c("dumb1", "dumb2", "dumb3")
+dummy2 <- c("dumber1", "dumber2", "dumber3")
+dummy3 <- c("dumbest1", "dumbest2", "dumbest3")
+
+data_dropped <- data.frame(dummy1, dummy2, dummy3)
+
 ##########################################################################################
 
 ui <- navbarPage(title = "CDC Wonder Data - Underlying Causes of Deaths Dataset",
@@ -31,16 +38,18 @@ ui <- navbarPage(title = "CDC Wonder Data - Underlying Causes of Deaths Dataset"
                               sidebarLayout(
                                   sidebarPanel(
                                       fileInput(inputId = "data_file", 
-                                                label = "Choose CSV File",
+                                                label = "Choose File",
                                                 accept = c(
-                                                    "text/csv",
+                                                    "text/csv/rds",
                                                     "text/comma-separated-values,text/plain",
-                                                    ".csv")
+                                                    ".csv", ".rds")
                                       ),
+                                      
                                       tags$hr(),
-                                      checkboxInput(inputId = "header", 
-                                                    label = "Header", 
-                                                    value = TRUE),
+                                      
+                                      radioButtons(inputId = "file_type", 
+                                                   label = "Choose File Type", 
+                                                   choices = c("CSV", "RDS")),
                                       
                                       downloadButton( outputId = "download_hist",
                                                       label = 'Download Histogram'),
@@ -48,13 +57,13 @@ ui <- navbarPage(title = "CDC Wonder Data - Underlying Causes of Deaths Dataset"
                                                       label = 'Download Scatter/Box-Plot'),
                                       
                                       # Consider: https://shiny.rstudio.com/reference/shiny/1.4.0/varSelectInput.html
-                                      selectInput(inputId = 'variable',
+                                      varSelectInput(inputId = 'variable',
                                                   label = 'Histogram - Choose a variable to plot:',
-                                                  choices = names(data),
+                                                  data = data_dropped,
                                                   selected = 'deaths'),
                                       
                                       sliderInput(inputId = "Bins",
-                                                  label = "Number of bins:",
+                                                  label = "Number of bins (currently non-functional):",
                                                   min = 1,
                                                   max = 50,
                                                   value = 30),
@@ -62,9 +71,9 @@ ui <- navbarPage(title = "CDC Wonder Data - Underlying Causes of Deaths Dataset"
                                       textOutput(outputId = "Note1", 
                                                  container = span),
                                       
-                                      selectInput(inputId = 'variable2',
+                                      varSelectInput(inputId = 'variable2',
                                                   label = 'Boxplot/Scatterplot - Choose a variable to plot:',
-                                                  choices = names(data),
+                                                  data = data_dropped,
                                                   selected = 'deaths'),
                                   ),
                                   mainPanel(
@@ -92,7 +101,7 @@ ui <- navbarPage(title = "CDC Wonder Data - Underlying Causes of Deaths Dataset"
 
 ##########################################################################################
 
-server <- function(input, output) {
+server <- function(input, output, session) {
     # creating the plot
     # input$file1 will be NULL initially. After the user selects
     # and uploads a file, it will be a data frame with 'name',
@@ -105,31 +114,49 @@ server <- function(input, output) {
     my_variable <- reactive({input$variable})
     my_variable2 <- reactive({input$variable2})
     
+    ##########################################################################################
+    
     my_data <- reactive({
+        
+        # Get the input object.
         input_file <- input$data_file
         
         if (is.null(input_file))
             return(NULL)
         
-        # Ensure correct data types.
-        data <- read_csv2(input_file$datapath)
-        data <- data %>% mutate_if(is.character, as.factor)
-        data <- data %>% mutate(county_code = as.factor(county_code))
-        data <- data %>% mutate(year = as.factor(year))
-        data <- data %>% mutate(year_code = as.factor(year_code))
-        data <- data %>% mutate(percent_of_total_deaths = as.numeric(gsub("%", "", percent_of_total_deaths)))
-        data <- data %>% mutate(deaths = as.integer(deaths))
-        data <- data %>% mutate(population = as.integer(population))
+        # Determine parsing function to use based on file type.
+        if (input$file_type == "RDS") {
+            data <- readRDS(file = input_file$datapath)
+            print("RDS file type chosen!")
+        } 
+        else {
+            data <- read_csv2(input_file$datapath)
+            print("CSV file type chosen!")
+        }
         
-        return(data)
+        # Drop unecessary columns in our dataset.
+        data_dropped <- select(data, -c("gender_code", "race_code", "year_code", 
+                                            "ten_year_age_groups_code", "county_code", 
+                                            "crude_rate", 
+                                            "crude_rate_lower_95percent_confidence_interval", 
+                                            "crude_rate_upper_95percent_confidence_interval", 
+                                            "crude_rate_standard_error"))
+        
+        # Update the available column names of dataframe from uploaded dataset file.
+        updateVarSelectInput(session = session, inputId = "variable", label = "columns", data = data_dropped)
+        updateVarSelectInput(session = session, inputId = "variable2", label = "columns2", data = data_dropped)
+        
+        return(data_dropped)
     })
+    
+    ##########################################################################################
     
     # Print a note about choosing a variable.
     output$Note1 <- renderText({
-        print("Plot type dependent on variable type
-              (Categorical vs. Quantitative)
-              (Note: Use crude_rate_added instead)")
+        print("Categorical (boxplot)\nQuantitative(scatterplot)")
     })
+    
+    ##########################################################################################
     
     # Histogram.
     my_hist <- reactive({
@@ -143,8 +170,16 @@ server <- function(input, output) {
         
     })
     
+    ##########################################################################################
+    
     # Scatterplot or Boxplot.
     my_scatterbox <- reactive({
+        
+        # Get the input object.
+        input_file <- input$data_file
+        
+        if (is.null(input_file))
+            return(NULL)
         
         column_name <- input$variable2
         if (is.numeric(my_data()[[column_name]])) {
@@ -171,7 +206,7 @@ server <- function(input, output) {
         }
     })
     
-    #############################################
+    ##########################################################################################
     
     # Display histogram in the app tab panel.
     output$histogram <- renderPlot({
@@ -188,10 +223,13 @@ server <- function(input, output) {
     output$glimpse <- renderPrint({
         glimpse(my_data())
     }, width = 800)
+    
     # Display head() of the data.
     output$head <- renderPrint({
         head(my_data(), 200) %>% knitr::kable()
     }, width = 800)
+    
+    ##########################################################################################
     
     # Export plots.
     output$download_hist <- downloadHandler(

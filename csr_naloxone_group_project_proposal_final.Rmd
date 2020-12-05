@@ -1,0 +1,563 @@
+---
+title: "CSR Naloxone Standing Order Project - Project Proposal Final"
+author: 'STAT 245, Fall 2020 (Group Members: Nana Ama Baidoo, Alex Visser, Joshua Ridder, Joseph Jinn)'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  html_document:
+    fig_height: 8
+    fig_width: 13
+    toc: true
+  pdf_document:
+    fig_height: 8
+    fig_width: 13
+classoption: landscape
+---
+
+```{r, setup, include = FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr)
+require(readr)
+# require(reticulate) 
+require(ggeffects)
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = TRUE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = FALSE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+Note to self: Run "remotes::install_github('ProjectMOSAIC/ggformula')" to install development version of ggformula.
+
+```{r}
+# sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+# remotes::install_github('ProjectMOSAIC/ggformula')
+```
+
+## Miscellaneous Resources:
+
+[R-Markdown Lists](https://pandoc.org/MANUAL.html#block-content-in-list-items)
+
+[readr documentation](https://www.rdocumentation.org/packages/readr/versions/1.3.1)
+
+[read_table documentation](https://readr.tidyverse.org/reference/read_table.html)
+
+[read_delim documentation](https://www.rdocumentation.org/packages/readr/versions/1.3.1/topics/read_delim)
+
+[Data Tidying Tutorial](https://rsconnect.calvin.edu:3939/content/24/#section-other-data-file-formats)
+
+[DPLYR joins](https://dplyr.tidyverse.org/reference/join.html)
+
+[Join explanations using DPLYR](https://statisticsglobe.com/r-dplyr-join-inner-left-right-full-semi-anti)
+
+[R - Regular Expressions](https://rstudio.com/wp-content/uploads/2016/09/RegExCheatsheet.pdf)
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 1. Project Partner
+
+Project Partner: Calvin University - The Center for Social Research 
+
+>*We conduct social-scientific research projects, taking data from collection to reporting, through focus groups, statistical analyses, program evaluations, maps, interactive data visualizations, surveys and more.*
+
+>*The Center conducts and collaborates on several large research projects and several dozen smaller projects annually for academic, public-sector, nonprofit, religious, and business organizations.*
+
+Cited from: [CSR](https://calvin.edu/centers-institutes/center-for-social-research/)
+
+
+### Project Contacts:
+
+* Keila Pieters: krp28@calvin.edu
+  + Update: This contact has left CSR and is no longer available.
+
+* Laura Luchies: lbl7@calvin.edu
+  + Update: Primary and ONLY contact at the moment.
+
+
+### Project Name: **Center for Social Research - Naloxone Standing Order Project - CDC WONDER Data Project**
+
+### Project Description:
+
+>"The Center for Social Research is working on evaluating Michigan’s state-wide naloxone standing order. Naloxone is a drug that reverses opioid overdose. An opioid can be a prescription opioid for pain like oxycodone or morphine or non-prescription like heroin.
+
+>The standing order evaluation is part of the larger MODA (Michigan overdose data to action) initiative to combat the opioid epidemic. The US is currently considered to be in the third wave of the opioid epidemic (read more about the opioid epidemic at https://www.cdc.gov/drugoverdose/epidemic/index.html).
+
+>So far, we have conducted interviews and focus groups with key people from a variety of fields who have experience with the standing order, opioid use disorder, recovery, harm reduction, etc. Through these interviews and focus groups, we have identified several key outcomes or goals the standing order should be accomplishing." 
+
+Cited from: Documentation provided by Keila Pieters (STAT 2020 fall info and research questions 20200824.docx).
+
+### Available In: 
+
+[GitHub Respository - Joseph Jinn](https://github.com/J-Jinn/Stat-245-CSR-Naloxone-Standing-Order-Consulting-Project)
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## Project Information:
+
+### Potential Research Question(s):
+
+* General fitting of a model to the data in order to predict the number of drug-related deaths.
+  + Utilize all available variables in the data.
+  + Filter by drug-related deaths only.
+  + Update: We are currently exploring this research question.
+  
+
+* Trends in overdose deaths in Kent County compared to other counties including but not limited to Wayne, Ingham, Macomb, Washtenaw:
+  + Do numbers seem to be increasing, decreasing, or staying the same after 2017?
+    - Update: We are not going to explore this sub-question.
+  + Consider creating a map and tracking it over time.
+    - Update: We are not going to create a map.
+
+*Note: Only have 684 observations for drug-related deaths.  Might not be feasible to fit a model to compare Kent County against others as filtering by counties will further reduce size of dataset and viable number of parameters.*
+
+* Does gender, age, or race seem to have an effect on overdose rate?
+  + Consider using metropolitan area as another variable.
+  + Update: We are not currently considering pursuing this research question.
+  
+*Note: Will not pursue answering question on overdose rate, which is essentially deaths / population for each observation.*
+
+* Compare cause of death including narcotics to non-narcotics.
+  + Update: Attempted to fit a logistic (binary) regression model for this research question.  Things did NOT work out so abandoning this research question for now.
+  + Has one increased as the other decreased over time?
+    - Update: We are not going to explore this sub-question.
+  + Have both increased/decreased?
+    - Update: We are not going to explore this sub-question.
+
+*Note: Model fitting to compare drug versus non-drug cause of death has resulted in model assessment issues and technical issues that are currently un-resolvable.*
+
+* Anything else you find interesting!
+
+
+#### Other Considerations:
+
+Differences in trends over time in INSERT_VARIABLE_NAME.
+Number of overdose deaths affected by geographic and demographic groups.
+
+*Cited from: Documentation provided by Keila Pieters.*
+
+_______________________________________________________________________________________________
+
+General model fitting to predict the number of drug-related deaths.
+>Response variables: "deaths"
+Type of Response: Count data (negative binomial, poisson)
+
+Trends in overdose deaths in Kent County compared to other counties.
+>Response Variable: "deaths" (common to all queries)
+Type of Response: Count data (negative binomial regression modeling or similar)
+
+Does gender, age, or race seem to have an effect on overdose rate?
+>Response Variable: "crude_rate" (deaths / population * 1000)
+Type of Response: Continuous data (consider multiple linear regression)
+
+Compare cause of death including narcotics to non-narcotics.
+> Response variable: Cause Of Death (create new factor variable) = (0/failure - Non-Drug, 1/success - Drug)
+Type of Response: We could convert this into a logistic (binary) regression problem by defining success = Drug Induced Causes and failure = Alcohol Induced Causes + All other non-drug and non-alcohol causes.
+
+_______________________________________________________________________________________________
+
+### About how many predictors can you include, given the size of the data set?
+
+>We have nearly 20K rows in our dataset.  But, only 684 are drug-related deaths.  Can use full dataset for comparing drug versus non-drug deaths but only a small subset to answer the other research questions concerning only drug-related deaths.
+
+```{r}
+data <- readRDS(file = "datasets\\joseph_jinn_queries\\CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+```{r}
+data_drug_only <- data %>% filter(data$cause_of_death == "drug")
+```
+
+Rule of Thumb:
+
+```{r}
+nrow(data_drug_only) / 15
+```
+
+Rule of Thumb for Logistic Regression:
+
+```{r}
+min(sum(data$cause_of_death == "drug"), 
+    sum(data$cause_of_death == "other") + sum(data$cause_of_death == "alcohol")) / 15
+```
+
+According to rule of thumb, we can have at most about 45 parameters in our model.
+
+_______________________________________________________________________________________________
+
+### All potential predictors (not just the ones currently of interest).
+
+Trends in overdose deaths in Kent County compared to other counties.
+> "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday", "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause", "Single-Year Ages", "Five-Year Age Groups", "Ten-Year Age Groups", and "2013 Urbanization".
+
+Does gender, age, or race seem to have an effect on overdose rate?
+> "Gender", "Single-Year Ages","Five-Year Age Groups", "Ten-Year Age Groups", and "Race".
+We can also consider "County, "Hispanic Origin", "Year", "Month", "Weekday", "Autopsy", "Place of Death", "Drug/Alcohol Induced Cause", , and "2013 Urbanization".
+
+Compare cause of death including narcotics to non-narcotics.
+> "County", "Gender", "Hispanic Origin", "Race", "Year", "Month", "Weekday", "Autopsy", "Place of Death", "Single-Year Ages", "Five-Year Age Groups", "Ten-Year Age Groups", and "2013 Urbanization".
+
+*Note: Not all of these are available in our current dataset.  We would have to create another dataset from querying for aggregate statistics in order to access them.  This could be for future work.*
+
+_______________________________________________________________________________________________
+
+### CDC Wonder Underlying Causes of Death Dataset Variables:
+
+#### GroupBy Variables of Interest:
+
+"County"
+"Gender"
+"Race"
+"Year"
+"Drug/Alcohol Induced Cause"
+"Ten-Year Age Groups"
+
+
+##### Common to all CDC Wonder Data queries:
+
+"deaths"
+"population"
+"crude_rate"
+"percent_of_total_deaths"
+
+
+##### Optional query variables that can be added:
+
+"crude_rate_lower_95percent_confidence_interval"
+"crude_rate_upper_95percent_confidence_interval"
+"crude_rate_standard_error"
+
+
+#### GroupBy Variables Not of Interest:
+
+"Single-Year Ages",
+"Five-Year Age Groups"
+
+"Hispanic Origin"
+"Autopsy"
+"Place of Death"
+
+"2013 Urbanization" - classifies population density and other factors at the county level - pick between the 2006 or the 2013 NCHS Urban-Rural Classification Scheme for Counties. 
+
+"Month"
+"Weekday"
+
+_______________________________________________________________________________________________
+
+>Trends in overdose deaths in Kent County compared to other counties.
+
+### Random Effects:
+
+* None.
+
+
+### Interactions (not necessarily an exhaustive list):
+
+* Year and Population
+* County and Race 
+* County and Population 
+* Gender and Race
+* Year and County
+
+
+##### Offsets(when applicable): 
+
+* Can offset "deaths" with "population" although "crude _rate" = deaths / population * 1000, which is similar.
+
+_______________________________________________________________________________________________
+
+>Does gender, age, or race seem to have an effect on overdose rate (a.k.a. "crude rate")?
+
+Random Effects:
+
+* None.
+
+
+Interactions:
+
+* Would be similar to above.
+
+
+Offsets(when applicable):
+
+* Not applicable.
+
+_______________________________________________________________________________________________
+
+>Compare cause of death including narcotics to non-narcotics.
+
+Random Effects:
+
+* None
+
+
+Interactions:
+
+* Would be similar to above.
+
+
+Offsets(when applicable): 
+
+* Not applicable.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 2. Goals and Deliverables
+
+### Goals - Research Question(s):
+
+* General fitting of a model to the data in order to predict the number of drug-related deaths.
+
+* Will explore other research questions given time (not too likely at this point).
+
+_______________________________________________________________________________________________
+
+### Project Deliverables:
+
+* Dataset(s) containing all variables of interest:
+  + CSV file format - cleaned and tidy.
+    - Completed (CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.csv).
+  + RDS file format - cleaned and tidy.
+    - Completed (CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds).
+   
+    
+* Shiny Web App prototype.
+  + Currently developing a simple Shiny web app with interactive EDA elements.
+    - Refer to folder "csr_naloxone_draft_interactive_element" for the Shiny app.
+  + FIXME: Currently works locally but not after being hosted online.
+
+
+* R-Markdown files containing all analysis code.
+  + PDF/HTML version after knitting.
+  + Refer to the following files:
+    - csr_naloxone_group_project_proposal_final.Rmd (this file)
+    - csr_naloxone_tidy_dataset_final.Rmd (data cleaning and tidying file)
+    - csr_naloxone_project_final_deliverable.Rmd (final deliverable for instructor/partner)
+      + Includes exploratory data analysis, model fitting, model assessment, prediction plots.
+
+[Link to Shiny Web App](https://rsconnect.calvin.edu:3939/connect/#/apps/123/info)
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 3. Data
+
+Primary Data Source - Aggregate Data Queries From: 
+
+1. [CDC Wonder Data Queries](https://wonder.cdc.gov/ucd-icd10.html)
+
+2. [Basic Query Template](https://wonder.cdc.gov/controller/saved/D76/D95F739)
+
+Secondary Data Sources - Aggregate Data Statistics From:
+
+1. [VSSR Dataset](https://www.cdc.gov/nchs/nvss/vsrr/drug-overdose-data.htm)
+
+2. [2018 Drug Overdose Death Rates](https://www.cdc.gov/drugoverdose/data/statedeaths/drug-overdose-death-2018.html)
+
+
+The CDC website provides a GUI/dashboard by which you can perform queries to obtain aggregate statistics based on various criteria.
+
+*Unfortunately, there is no way to obtain the actual data in terms of individual observations/rows - only aggregate statistics from queries.*
+
+Format: flat text file --> parse in R-Studio --> store in tibble/dataframe --> export to CSV/RDS --> read_csv2()/readRDS() + Analysis
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 4. Data Prep
+
+GROUP BY:
+
+*	State
+*	County (Kent county especially)
+*	Drug/Alcohol Induced Cause 
+*	Cause of death (search for keyword “narcotics”)
+*	Gender
+*	Race
+*	Age
+
+Filters:
+
+* States (Michigan specially)
+* Years (2012-2018)
+  + Option to export years individually if you want one more level of detail.
+* Counties - Kent, others.
+  + Option to export counties individually if you want one more level of detail
+
+*Cited from: Documentation provided by Keila Pieters.*
+
+**Note: Refer to "csr_naloxone_tidy_dataset_final.Rmd" for details.**
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+head(data)
+```
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 5. Background
+
+**At this point in time, we have already done any/all additional research that we are going to do. The end of the semester is approaching and despite the various obstacles we have encountered, we are going ahead with our current course of action.**
+
+* Medline Plus Video (offers explanation of how Naloxone saves lives)
+  + [Youtube - National LIbrary of Medicine](https://www.youtube.com/watch?v=cssRZEI9ujY&feature=youtu.be)
+
+* CDC Website:
+  + [Help - Main Page](https://wonder.cdc.gov/wonder/help/main.html)
+  + [Help - FAQ](https://wonder.cdc.gov/wonder/help/faq.html)
+  + [CDC - About Opioid Epidemic](https://www.cdc.gov/drugoverdose/epidemic/index.html)
+
+* Hekman LIbrary:
+  + [The Opioid Crisis: A Reference Handbook - David E. Newton](https://ebookcentral-proquest-com.lib-proxy.calvin.edu/lib/calvin/detail.action?docID=5446858)
+  
+*Note: Not sure if you have to be signed into your account to view the link.*
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 6. Current Skills 
+
+**Nana Ama Baidoo**
+
+* Tableau
+* Excel
+* Python (very basic)
+* R (basic)
+* Microsoft Office applications
+* Organization
+* Open-minded & Understanding
+
+**Alex Visser**
+
+* Excel
+* Python
+* Organization
+* Communication
+* R (Basic)
+* Time management
+* Creativity
+
+**Joshua Ridder**
+
+* Python/C++/C#
+* R (basic)
+* Excel/Word/Powerpoint
+* GitHub
+* Discord/Slack/Teams
+
+**Joseph Jinn**
+
+* Python/R/T-SQL (basic familiarity)
+* Javascript, HTML, CSS (basic familiarity)
+* D3.js (very basic familiarity)
+* KNime (very basic familiarity)
+* GitHub/GitFlow, SourceTree - frontend for Git (version control tools)
+* PyCharm, PHPStorm, R-Studio (IDE's)
+* VS Code, Notepad++ (text editors)
+* Adobe Photoshop, InDesign (probably not relevant)
+* Microsoft Word, Excel, PowerPoint, Outlook
+* Modo, Zbrush, Substance Painter (3D Modeling - irrelevant)
+* Unreal Engine 4 (basic familiarity - irrelevant)
+* Discord, Slack, M$ Teams (communication platforms)
+* Windows 10 OS (please don't ask me to work on MacOS or Linux)
+* VSCode (text editor)
+* SQL Server 2019 (very basic familiarity)
+* Trello (project management tool - task assignment/priority/etc.)
+* Caffeine
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 7. Work plan
+
+
+### Initial Plans:
+
+* Initial plan to work on this project proposal.
+* Next step is to download the data subsets and explore them in R, which will probably include some data wrangling and manipulation (and general "night science" EDA).
+* Most likely team and partner meetings will remain purely virtual in nature via e-mail, Teams, etc.
+* Schedule coordination will probably be a big hassle in synchronously working together, so we believe asynchronous work will be the modus operandi.
+* Will schedule meeting(s) with project partner(s) as deemed necessary in order to obtain feedback as to current progress.
+
+
+### Updated Plans:
+
+* We are working completely asynchronously at the moment (no real-time collaboration outside of assigned time in-class)
+  + Continue aggregate data queries individually and exploring the data after parsing into R.
+  + Upload aggregate data queries in "datasets" folder, with suggested naming scheme in the tidy dataset .Rmd under individual folders labeled by group member name.
+* Suggest reporting to group members/instructor via Microsoft Teams and/or E-mail for progress updates.
+  + This includes uploads to shared project directory, modifications to shared project files, etc.
+* Suggest scheduling further group and project partner meetings via M$ Teams for real-time coordination and progress updates.
+  + Synchronous scheduling could be difficult based on everyone's availability or lack thereof...
+* Etc.
+
+
+### Current Plan 11/18/20:
+
+* We appear to have lost one of our group members, Joshua Ridder, to the vagaries of fate and circumstances.  Hence, we are proceeding without him.
+* Drafts of all work are essentially complete. We merely need feedback on the contents of "csr_naloxone_draft_model.Rmd" and our prototype Shiny web app.
+  + Primary issue is to fix the issues with our current draft models.
+  + Secondary issue is to figure out why the Shiny web app works locally but not online.
+* We are still working asynchronously without any additional input from our project partner primary contact. This is not likely to change.
+* Primary goal is to re-factor all "draft" content into a more streamlined and pared down version for re-submission for additional feedback and a grade bump.
+  + Afterwards, determine what is essential as elmenents to include in final project deliverables and move towards it.
+  
+
+### Final Plan 12/5/20:
+
+* We have permanently lost a group member, Joshua Ridder.  All work is attributed only to the remaining member of our group.
+* We have lost Keila Pieters as a resource and project contact.  She left Calvin's Center for Social Research for a new job.
+* The Shiny Web App may or may not finish development.  Time is limited and that is an optional component that doesn't necessarily provide any truly useful utility.
+* Nothing really has gone perfectly according to plan.  All of the models I've attempted have issues of some sort which may or may not be perfectly resolved by the time of final submission.
+* The main goal at this point is to fit a model that can predict deaths based on the available predictors.  Given time, I"ll attempt to fit more specific models to answer specific research questions/sub-questions that are essentially a subset of fitting a general model to predict drug-related deaths.  But, if I can't get a reliable general model fitted to the drug-related subset of the entire dataset there's little hope I can get a reliable model specifically filtered to answer the research questions.
+* Will submit all available files/work done throughout the semester.  Perhaps someone in the future will have better luck than we did.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+## 8. Requests
+
+>Free and unlimited supply of caffeinated products.
+
+* On a more serious note, probably occasional coding assistance in R.
+  + Update: Yep, receiving this courtesy of Professor De Ruiter.
+
+* I (Joseph Jinn) am keeping my own copies of project files in a personal GitHub Repository for my own edification (and just in case).
+  + Update: This will continue till the end of the project.
+
+* Petition R-Studio developers to fix shared project bug mentioned earlier.
+  + Update: Doesn't seem to affect us although the other limitations of multiple users editing the same file synchronously is.
+
+* Pray that I can find a job in the current COVID-19 pandemic and job market...
+  + Update: Still searching for a job. Will most likely stay at Calvin part-time for the Spring 2021 semester to take Stat-341 and one additional course.
+  
+* Would be nice to see a Stat-345 which is a continuation of Stat-245 in the future.  Pity I won't be there to take it if it ever happens.
+
+_______________________________________________________________________________________________
+_______________________________________________________________________________________________
+
+
+
+
