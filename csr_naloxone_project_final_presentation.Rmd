@@ -1,0 +1,750 @@
+---
+title: "CSR Naloxone Presentation"
+author: "Nana Ama Baidoo, Alex Visser, Joseph Jinn"
+date: "12/15/2020"
+output:
+  ioslides_presentation: default
+  html_document:
+    df_print: paged
+  beamer_presentation: default
+  slidy_presentation: default
+---
+
+
+```{r, setup, include=FALSE}
+# load packages that are going to be used
+require(tidyverse)
+require(ggformula)
+require(mosaic)
+require(fastR2)
+require(s245)
+require(pander)
+require(DHARMa)
+require(glmmTMB)
+require(MuMIn)
+require(car)
+require(dplyr)
+require(readr)
+require(ggeffects)
+require(mgcv)
+# require(reticulate)
+
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+theme_set(theme_minimal(base_size=12))     # change theme for ggplot2/ggformula
+
+knitr::opts_chunk$set(
+  echo = FALSE,      # for homework, always show R code (this is the default)
+  error = TRUE, # do not interrupt generation in case of errors,
+  tidy = TRUE,     # display code as typed (rather than reformatted)
+  size = "small",   # slightly smaller font for code
+  message = FALSE, warning = FALSE) # don't print warnings or messages in compiled document. So you MUST check them in RStudio!
+```
+
+```{r, include=FALSE}
+# sessionInfo()
+options(max.print = 6000) # Ensure we can print entire summary.
+```
+
+## Partner: Center for Social Research
+
+- Created by Calvin Department of Sociology in 1970 because of lots of requests from professors for research assistance
+- Since, they have grown into an independent center that supports all of the social science departments at the school
+- Mission Statement: "The Calvin University Center for Social Research collaborates with campus and community partners to support evidence-based decisions through innovative social-scientific research."
+
+```{r CSR, out.width= '55%'}
+ knitr::include_graphics('https://calvin.edu/centers-institutes/center-for-social-research/files/_Social%20Research%20OTL%20rgb.png?language_id=1')
+```
+
+
+## Goals
+
+- Hope to evaluate where the current opioid epidemic stands
+- Analyze dataset from the CDC and to map trends in overdose death data
+- **Research Questions**
+  - *Can we predict the number of deaths from drug-use based on the available variables in our aggregate statistics dataset?*
+  - *Is there a difference in the fitted model when filtering by Kent versus other counties?*
+
+## Naloxone
+
+- With the opioid epidemic getting so bad, people are looking for ways to combat the effects of overdose
+- Naloxone is a drug that can reverse those effects
+- Substances that are often overdosed on include prescription drugs like oxycodone, or morphine and then non-prescription drugs such as heroin
+
+<div class="columns-2">
+
+```{r naloxone, out.width= '75%'}
+ knitr::include_graphics('https://www.networkforphl.org/wp-content/uploads/2018/09/iStock-1170556060.jpg')
+```
+
+- Naloxone attaches to opioid receptors and reverses their effects when administered
+
+<div class="columns-2">
+
+## Data
+
+![CDC Wonder](https://rstudio.calvin.edu:8787/s/cc7998c5fb3b13878788f/files/CSRNaloxone/images/CDCWonder.png)
+
+
+- Challenges with dataset:  We lacked actual access to individual rows within the CDC data and instead had to perform data QUERIES to generate AGGREGATE statistics (these became the rows in our dataset) to which we would fit a model. 
+
+- Great part about the dataset was that once querying was done, we got a lot of observations for our modeling and analysis.
+
+## Data Glimpse
+
+```{r, include=FALSE}
+data <- readRDS(file = "datasets//joseph_jinn_queries//CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+```{r, include=FALSE}
+data <- data %>% select(-c(gender_code, race_code, year_code, ten_year_age_groups_code, 
+                           county_code, crude_rate,
+                           crude_rate_lower_95percent_confidence_interval,
+                           crude_rate_upper_95percent_confidence_interval,
+                           crude_rate_standard_error))
+```
+
+```{r, include=FALSE}
+data <- data %>% filter(data$cause_of_death == "drug")
+```
+
+```{r, include=FALSE}
+data <- data %>% mutate(year_numeric = as.numeric(as.character(year)))
+```
+
+```{r, include=TRUE}
+glimpse(data)
+```
+
+## Histogram - Gender
+
+```{r}
+gf_bar(~gender, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Gender",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+)
+```
+
+More females than males in the dataset.
+
+## Shiny App
+
+[Shiny App](https://rsconnect.calvin.edu:3939/connect/#/apps/123/info)
+
+## Histogram - Race
+
+```{r}
+gf_bar(~race, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Raceh",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+Most of the data covers whites.
+
+## Histogram - Year
+
+```{r}
+gf_bar(~year, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="Year",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+)
+```
+
+There's more available data as we move towards the present.
+
+## Histogram - 10 Year Age Groups
+
+```{r}
+gf_bar(~ten_year_age_groups, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="10 Year Age Groups",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+We have far less data for 65-74 year group than the others.
+
+## Histogram - County
+
+```{r}
+gf_bar(~county, data = data, alpha = 0.25, color = "#087EC6",
+       xlab="County",
+       ylab="Number of Observations",
+       title="CDC Wonder Underlying Cause of Death Dataset Queries",
+       subtitle = "",
+       caption = ""
+) + coord_flip()
+```
+
+We have significantly more data for select counties as compared to others.  Though Keila Pieters provided a research question that focuses on Kent County, we really don't have sufficient data for Kent County and other counties to fit a model to.
+
+## Scatterplot - Deaths vs. Population
+
+```{r}
+unique(data$county)
+```
+
+```{r}
+data %>% filter(data$county == 'Kent County, MI') %>% nrow()
+```
+
+```{r}
+# gf_bar(~cause_of_death, data = data, alpha = 0.25, color = "#087EC6",
+#        xlab="Cause of Death",
+#        ylab="Number of Observations",
+#        title="CDC Wonder Underlying Cause of Death Dataset Queries",
+#        subtitle = "",
+#        caption = ""
+# )
+```
+
+```{r}
+gf_point(deaths ~ population, data = data, alpha = 0.1, color = "#087EC6",
+         xlab="Deaths",
+         ylab="Population",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+There's not really a detectable trend looking at this plot.
+
+## Scatterplot - Deaths vs. Crute Rate Added
+
+```{r}
+gf_point(deaths ~ crude_rate_added, data = data, alpha = 0.1, color = "#087EC6",
+         xlab="Crude Rate Added",
+         ylab="Deaths",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+Crude rate is calculated by the formula: crude_rate = count (deaths) / population * 1000.
+
+## Scatterplot - Deaths vs. Percent of Total Deaths
+
+```{r}
+gf_point(deaths ~ percent_of_total_deaths, data = data, alpha = 0.25, color = "#087EC6",
+         xlab="Percent of Total Deaths",
+         ylab="Deaths",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+Percent of total deaths is calculated by the formula: deaths / population * 100%.
+
+
+
+## Trends in overdose deaths in Kent County compared to other counties - Plot 1
+
+```{r}
+gf_col(fct_reorder(county, percent_of_total_deaths) ~ percent_of_total_deaths, data = data) %>% 
+  gf_labs(title = "Distribution of deaths by County", x = "Deaths (%)", y = "County")
+```
+
+## Trends in overdose deaths in Kent County compared to other counties - Plot 2
+
+```{r}
+data %>% 
+  filter(county == "Wayne County, MI") %>%
+  gf_props(~ten_year_age_groups, fill = ~race, data = data)
+```
+
+*Filtered for only Wayne county because I thought it was interesting that their percentages of deaths were way higher than every other county*
+
+## Trends in overdose deaths in Kent County compared to other counties - Plot 3
+
+```{r}
+data %>%
+  filter(county == "Kent County, MI") %>%
+  gf_props(~ten_year_age_groups, fill = ~race, data = data)
+```
+
+*Did same for Kent since we're trying to make some comparisons*
+
+## Trends in overdose deaths in Kent County compared to other counties - Plot 4
+
+```{r, include=FALSE}
+data_groupby_county <- data %>%
+  group_by(county) %>%
+  summarize(deaths = median(deaths))
+```
+
+```{r, include=FALSE}
+head(data_groupby_county, 5)
+```
+
+```{r}
+gf_point(deaths ~ county, data = data_groupby_county,
+         alpha = 1.0, color = "black",
+         ylab="Median(deaths) per Year",
+         xlab="County",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) + coord_flip()
+```
+
+Doesn't seem to be a linear trend at least when it comes to the median of deaths by county.  We should also note that some counties have far more associated observations than others in our dataset.
+
+
+
+## Does gender, age, or race seem to have an effect on overdose rate? - Plot 1
+
+```{r}
+gf_boxplot(crude_rate_added ~ gender, data = data, 
+           alpha = 0.25, color = "#087EC6",
+           xlab="Gender",
+           ylab="Crude Rate (deaths / population * 1000)",
+           title="CDC Wonder Underlying Cause of Death Dataset Queries",
+           subtitle = "",
+           caption = "")
+```
+
+There certainly sesems to be differences in the crude rate based on gender.
+
+## Does gender, age, or race seem to have an effect on overdose rate? - Plot 2
+
+```{r}
+gf_boxplot(crude_rate_added ~ race, data = data, 
+           alpha = 0.25, color = "#087EC6",
+           xlab="Race",
+           ylab="Crude Rate (deaths / population * 1000)",
+           title="CDC Wonder Underlying Cause of Death Dataset Queries",
+           subtitle = "",
+           caption = "")
+```
+
+While our dataset doesn't contain all 4 races since we're limiting to drug deaths only, there does appear to be some marginal differences in crude rate between blacks and whites.
+
+## Does gender, age, or race seem to have an effect on overdose rate? - Plot 3
+
+```{r}
+gf_boxplot(crude_rate_added ~ ten_year_age_groups, data = data, 
+           alpha = 0.25, color = "#087EC6",
+           xlab="10 Year Age Groups",
+           ylab="Crude Rate (deaths / population * 1000)",
+           title="CDC Wonder Underlying Cause of Death Dataset Queries",
+           subtitle = "",
+           caption = "")
+```
+
+There are certainly differences in crude rates between across the 10-year age groups.
+
+
+
+## Do numbers seem to be increasing, decreasing, or staying the same after 2017?  I'm going to modify this question to be across all years as the data only goes up to 2018. - Plot 1
+
+```{r}
+gf_boxplot(deaths ~ year, data = data, 
+           alpha = 0.25, color = "#087EC6",
+           xlab="10 Year Age Groups",
+           ylab="Crude Rate (deaths / population * 1000)",
+           title="CDC Wonder Underlying Cause of Death Dataset Queries",
+           subtitle = "",
+           caption = "")
+```
+
+## Do numbers seem to be increasing, decreasing, or staying the same after 2017?  I'm going to modify this question to be across all years as the data only goes up to 2018. - Plot 2
+
+```{r, include=FALSE}
+data_groupby_year <- data %>%
+  group_by(year) %>%
+  summarize(deaths = median(deaths))
+```
+
+```{r, include=FALSE}
+head(data_groupby_year, 5)
+```
+
+```{r}
+gf_point(deaths ~ year, data = data_groupby_year,
+         alpha = 1.0, color = "black",
+         ylab="Median(deaths) per Year",
+         xlab="Year",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+)
+```
+
+Hmm, the number of deaths by year doesn't seem to follow a linear trend, at least.
+
+
+
+## Compare cause of death including narcotics to non-narcotics. Has one increased as the other decreased over time? Have both increased/decreased?
+
+```{r, include=FALSE}
+data_all_causes <- readRDS(file = "datasets//joseph_jinn_queries//CDCWonderDataQuery_UnderlyingCauseOfDeath_GROUPBY_GenderRaceYearTenYearAgeGroupCounty_LIMITBY_noneAllCausesOfDeathAllDates9decimalsPer1k_TIDY.rds")
+```
+
+```{r}
+data_all_causes <- data_all_causes %>% mutate(drug_death = case_when(
+  cause_of_death == "drug" ~ "yes",
+  TRUE ~ "no"))
+```
+
+```{r}
+data_all_causes <- data_all_causes %>% mutate(drug_death = as.factor(drug_death))
+```
+
+```{r}
+data_all_causes <- data_all_causes %>% mutate(drug_death = fct_relevel(drug_death, c("no", "yes")))
+```
+
+```{r}
+levels(data_all_causes$drug_death)
+```
+
+```{r}
+data_all_causes <- data_all_causes %>% mutate(year_numeric = as.numeric(as.character(year)))
+```
+
+```{r}
+data_non_drugs <- data_all_causes %>% filter(drug_death == "no")
+```
+
+```{r}
+data_drugs <- data_all_causes %>% filter(drug_death == "yes")
+```
+
+```{r}
+data_non_drugs_groupby_year <- data_non_drugs %>%
+  group_by(year) %>%
+  summarize(deaths = median(deaths))
+```
+
+```{r, include=FALSE}
+head(data_non_drugs_groupby_year, 5)
+```
+
+```{r}
+data_drugs_groupby_year <- data_drugs %>%
+  group_by(year) %>%
+  summarize(deaths = median(deaths))
+```
+
+```{r, include=FALSE}
+head(data_drugs_groupby_year, 5)
+```
+
+```{r}
+gf_point(deaths ~ year, data = data_non_drugs_groupby_year,
+         alpha = 1.0, color = "red",
+         ylab="Median(deaths) per Year",
+         xlab="Year",
+         title="CDC Wonder Underlying Cause of Death Dataset Queries",
+         subtitle = "",
+         caption = ""
+) %>% 
+  gf_point(deaths ~ year, data = data_drugs_groupby_year,
+           alpha = 1.0, color = "blue",
+           ylab="Median(deaths) per Year",
+           xlab="Year",
+           title="CDC Wonder Underlying Cause of Death Dataset Queries",
+           subtitle = "",
+           caption = ""
+  )
+```
+
+
+So, there are differences in the median of deaths between narcotic and non-narcotic cause of deaths.  However, there are significantly more observations for non-narcotic cause of death than narcotic cause of deaths.
+
+And that covers the initial list of research questions in the sense of exploratory data analysis for those questions.  The succeeding sections detail our efforts to fit a general model to predict number of deaths based on a subset of the available predictors in our dataset created from rows of aggregate statistics based on the results of our data queries on the CDC Wonder Underlying Causes of Death data.
+
+## Model
+
+Response: 
+
+Deaths
+
+Predictors: 
+
+gender
+race
+county
+ten_year_age_groups
+scale(population)
+s(year_numeric, bs = "cs", k = 10)
+gender:ten_year_age_groups
+gender:scale(population)
+gender:race
+race:scale(population)
+scale(population):ten_year_age_groups
+                          
+```{r, include=TRUE}
+gam_poisson_model <- bam(deaths ~ gender + race + county + ten_year_age_groups + scale(population) +
+                          s(year_numeric, bs = "cs", k = 10) +
+                          gender*ten_year_age_groups + gender*scale(population) + gender*race +
+                          race*scale(population) + scale(population)*ten_year_age_groups,
+                        data = data, select = TRUE, method = "ML", nthreads = 6, discrete = TRUE,
+                        control = gam.control(),
+                         family = poisson(link = "log"))
+```
+
+## Model Summary
+
+```{r, include=TRUE}
+summary(gam_poisson_model)
+```
+
+## Model Assessment - Overdispersion
+
+```{r}
+overdisp_fun(gam_poisson_model)
+```
+
+Over-dispersion looks good as it's around 2-3 units.
+
+## Model Assessment - ACF
+
+```{r, include=TRUE}
+gf_acf(~gam_poisson_model)
+```
+
+Issues at 5 different lags, but otherwise not too terrible.
+
+## Model Assessment - DHARMa
+
+```{r, include=FALSE}
+gam_poisson_model_sim <- simulateResiduals(gam_poisson_model, n = 1000)
+```
+
+```{r, include=TRUE}
+gf_point(gam_poisson_model_sim$scaledResiduals ~ fitted(gam_poisson_model)) %>%
+  gf_labs(x = "Predicted Number of Deaths",
+          y = 'Scaled Residuals')
+```
+
+This isn't quite a uniform distribution in the vertical sense.  We could have some mean-variance issues but nothing that looks particularly terrible. Since we're fitting a GAM and using a smoothing term, we don't need to check for the linearity condition.
+
+## Model Assessment - VIF
+
+```{r, include=TRUE}
+vif(gam_poisson_model)
+```
+
+## Model Assessment - Concurvity
+
+```{r, include=TRUE}
+concurvity(gam_poisson_model, full=TRUE)
+```
+
+## Model Selection - BIC
+
+We did fit a whole bunch of models before choosing this one.
+
+BIC()
+```{r, include=TRUE}
+BIC(gam_poisson_model)
+```
+
+## Model Selection - Anova
+
+```{r, include=TRUE}
+anova(gam_poisson_model)
+```
+
+anova() suggests dropping gender:scale(population) interaction.
+
+## Note:
+
+Prediction plots appear different between running on my local system versus on Calvin's R-Studio server.  Given this is still the case at the time of the presentation, I'm going to break out the knit-to-HTML version generated locally and explain the prediction plots using that document instead (some plots indicate no relationships when there is definitely a relationship).
+
+## Prediction plot for "gender":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'gender',
+          type = 'fixed') %>% plot()
+```
+
+Females appear to suffer fewer deaths on average then males.  The uncertainty for males is quite large.
+
+## Prediction plot for "race":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'race',
+          type = 'fixed') %>% plot()
+```
+
+Unfortunately, the other two races are not present when considering only drug related deaths instead of all causes of deaths.
+
+## Prediction plot for "county":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'county',
+          type = 'fixed') %>% plot() + coord_flip()
+```
+
+Only a few counties seem to have significant differences from their counterparts.
+
+## Prediction plot for "ten_year_age_groups":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'ten_year_age_groups',
+          type = 'fixed') %>% plot()
+```
+
+The 45-54 years age group seems to have the highest average deaths although the uncertainty is also greatest for this group.
+
+## Prediction plot for "population":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'population',
+          type = 'fixed') %>% plot()
+```
+
+As the population increases, so does the average number of deaths, which makes sense.
+
+## Prediction plot for "year_numeric":
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = 'year_numeric',
+          type = 'fixed') %>% plot()
+```
+
+Including the smooth terms does seem significant as that does seem to fit in the category of a non-monotonic non-linear relationship although it the non-monotonic aspect isn't that drastic as we see an overall increase over the years.
+
+## Prediction plot for "crude_rate_added":
+
+```{r}
+# ggpredict(gam_poisson_model, 
+#           terms = 'crude_rate_added',
+#           type = 'fixed') %>% plot()
+```
+
+## Prediction plot for "percent_of_total_deaths":
+
+```{r}
+# ggpredict(gam_poisson_model, 
+#           terms = 'percent_of_total_deaths',
+#           type = 'fixed') %>% plot()
+```
+
+## Prediction plots for "gender" and "ten_year_age_groups" interaction.
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('gender', 'ten_year_age_groups'),
+          type = 'fixed') %>% plot()
+```
+
+This interaction probably isn't significant as the pattern in age groups between genders is essentially the same.
+
+## Prediction plots for "gender" and "population" interaction.
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('population', 'gender'),
+          type = 'fixed') %>% plot()
+```
+
+Ditto for this, except for population.
+
+## Prediction plots for "gender" and "race" interaction.
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('gender', 'race'),
+          type = 'fixed') %>% plot()
+```
+
+Ditto for this, except for race.
+
+## Prediction plots for "population" and "race" interaction.
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('population', 'race'),
+          type = 'fixed') %>% plot()
+```
+
+This interaction term does seem significant as we see opposing patterns when considering population. 
+
+## Prediction plots for "population" and "ten_year_age_groups" interaction.
+
+```{r}
+ggpredict(gam_poisson_model, 
+          terms = c('population', 'ten_year_age_groups'),
+          type = 'fixed') %>% plot()
+```
+
+The 65-74 years age group seems to have an opposing trend to the other age groups when considering its interaction with population.
+
+## Experience:
+
+- A mix of awesomesness and challenges. One of our key partners left after a couple of weeks and we also lost a group member a few weeks into the project. Also, querying a dataset was a struggle which made it hard to have a clear direction at the start.
+
+- Some joys, however, were that we had some really talented people in R who worked hard to query data and make it into something we could actually use.
+
+- We would recommend to future groups that they should have a clear direction before diving into the dataset. 
+- Also, allocate a fixed meeting time to work on the project.
+
+- Some suggestions for the class would be having more time for projects during class time would be helpful.
+
+
+## Perspective:
+
+
+We've done about as much as we can with this dataset in terms of fitting a working model to predict "deaths" based on the available choice of predictors.  Further work could involve generating another aggregate statistics data set through data queries and seeing if we can get a better model by including even more variables (though that results in having to perform exponentially more queries in order to generate the necessary subsets to re-join into one single cohesive dataset due to the limitations of the query interface).  But, the semester is almost over and that isn't feasible in terms of time constraints.
+
+The model doesn't pass all model assessment checks so the conclusions we can draw from the model could be unreliable.
+
+## The End:
+
+_______________________________________________________________________________________________
+
+
+Below from the slides on presentation content:
+
+Presentation Contents 1
+Introduce your partner organization and/or person. What is their mission? What do they do?
+What were your project goals? What questions were you trying to answer?
+
+Presentation Contents 2
+What data did you have? What was awesome and what was challenging about your data? Here you can tell the story that you don’t tell in your report - what would another analyst need to know to deal with this data/question?
+Show representative or key graphs or tables that tell your data’s story
+
+Presentation Contents 3
+What is the main regression model you ended up using (maybe show code to fit)?
+What issues did you face planning or fitting your model, and how did you fix? Did you have to be creative or learn new things to succeed?
+What are the most important conclusions you draw from your model(s)?
+
+Presentation Contents 4
+What was the experience of working with your group/partner like?
+What were strengths and weaknesses, joys or challenges?
+What would you recommend/not to future groups; what lessons are learned?
+Can you suggest structural changes to the class/projects that could help?
+
+Presentation Contents 5
+What would you love to do if you got to keep working on this dataset?
+What mysteries remain, or what additional data would be enlightening?
+Do you think your results will aid and inform your partner’s work going forward? How so?
+
+_______________________________________________________________________________________________
+
+
+

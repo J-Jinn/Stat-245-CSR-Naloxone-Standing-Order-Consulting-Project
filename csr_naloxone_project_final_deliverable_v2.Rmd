@@ -106,6 +106,7 @@ gf_bar(~gender, data = data, alpha = 0.25, color = "#087EC6",
        caption = ""
 )
 ```
+
 More females than males in the dataset.
 
 ```{r}
@@ -424,7 +425,6 @@ gf_point(deaths ~ year, data = data_non_drugs_groupby_year,
            caption = ""
   )
 ```
-
 
 So, there are differences in the median of deaths between narcotic and non-narcotic cause of deaths.  However, there are significantly more observations for non-narcotic cause of death than narcotic cause of deaths.
 
@@ -865,7 +865,7 @@ Skipping dredge() as it will take a long time to run.
 anova(gam_poisson_model)
 ```
 
-anova() now suggests dropping "race", gender:scale(population) interaction.
+anova() suggests dropping gender:scale(population) interaction.
 
 _______________________________________________________________________________________________
 _______________________________________________________________________________________________
